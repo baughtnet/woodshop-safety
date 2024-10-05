@@ -24,13 +24,27 @@ router.get('/:testId/questions', async (req, res) => {
       'SELECT * FROM questions WHERE test_id = $1',
       [testId]
     );
-    const questions = result.rows.map(q => ({
-      ...q,
-      answers: JSON.parse(q.answers).sort(() => Math.random() - 0.5)
-    }));
+    console.log('Raw question data:', result.rows);
+    const questions = result.rows.map(q => {
+      console.log(`Question ${q.id} data:`, q);
+      let parsedAnswers = q.answers;
+      if (typeof q.answers === 'string') {
+        try {
+          parsedAnswers = JSON.parse(q.answers);
+        } catch (parseError) {
+          console.error(`Error parsing answers for question ${q.id}:`, parseError);
+          parsedAnswers = [];
+        }
+      }
+      return {
+        ...q,
+        answers: Array.isArray(parsedAnswers) ? parsedAnswers.sort(() => Math.random() - 0.5) : []
+      };
+    });
     res.json(questions.sort(() => Math.random() - 0.5));
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch test questions' });
+    console.error('Error fetching questions:', err);
+    res.status(500).json({ error: 'Failed to fetch test questions', details: err.message });
   }
 });
 

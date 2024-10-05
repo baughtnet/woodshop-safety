@@ -1,0 +1,13 @@
+INSERT INTO exam_questions (question, option_a, option_b, option_c, option_d, correct_answer) VALUES
+("What is the maximum depth of cut when jointing an edge on a jointer?", "1.5mm", "3mm", "5mm", "10mm", "B) 3mm"),
+("Who is allowed to change the depth of the outfeed table on a jointer?", "Any student", "The teacher or a qualified person", "It can be adjusted anytime", "Only during maintenance", "B) The teacher or a qualified person"),
+("If the stock you are jointing is less than 300mm long, what should you do?", "Joint it anyway", "Use push sticks", "Do not joint it", "Cut it into smaller pieces", "C) Do not joint it"),
+("What safety equipment is recommended to be worn when operating a jointer?", "Gloves and rings", "Approved eye protection and hearing protection", "Open-toed shoes", "No special equipment is needed", "B) Approved eye protection and hearing protection"),
+("What is the purpose of the safety guard on the jointer?", "To improve visibility", "To protect the operator from the cutter head", "To ensure smooth operation", "To secure the wood in place", "B) To protect the operator from the cutter head"),
+("Which of the following is a correct safety procedure when using the jointer?", "Ensure that hair is loose to allow airflow", "Push wood through the cut with your hands over the cutter", "Step your hands past the cutter head", "Joint boards less than 50mm wide without tools", "C) Step your hands past the cutter head"),
+("Before turning on the jointer, what should you check?", "Temperature of the machine", "That all guards are in place and functional", "Type of wood being used", "Amount of wood feed", "B) That all guards are in place and functional"),
+("Why is it important to check stock for defects before jointing?", "Defects can enhance the cutting experience", "Defects can damage the machine and cause kickback", "Defects will improve the finish", "Checking is not necessary", "B) Defects can damage the machine and cause kickback"),
+("Which part of the jointer is primarily responsible for cutting wood?", "Outfeed table", "Infeed table", "Cutter head", "Safety guard", "C) Cutter head"),
+("The purpose of the fence on the jointer is to:", "Hold the machine in place", "Secure the wood and control the cut", "Measure the thickness of the wood", "Provide a place to attach other tools", "B) Secure the wood and control the cut"),
+("The minimum length of wood that can safely be jointed is __________ mm.", "100", "250", "300", "350", "C) 300"),
+("One of the key safety considerations when using the jointer is to always joint with the __________.", "Edge", "Grain", "Filter", "Cutter", "B) Grain");
