@@ -5,7 +5,7 @@ import { Label } from "../ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Alert, AlertDescription } from "../ui/alert";
 
-const RegistrationForm = ({ onBackToLanding }) => {
+const RegistrationForm = ({ onBackToHome, onSuccessfulRegister }) => {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -13,6 +13,7 @@ const RegistrationForm = ({ onBackToLanding }) => {
     pin: ''
   });
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -25,6 +26,7 @@ const RegistrationForm = ({ onBackToLanding }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccess(false);
     
     try {
       const response = await fetch('http://localhost:3001/api/register', {
@@ -42,7 +44,10 @@ const RegistrationForm = ({ onBackToLanding }) => {
 
       const data = await response.json();
       console.log('Registration successful:', data);
-      // Handle successful registration (e.g., show success message, redirect to login)
+      setSuccess(true);
+      setTimeout(() => {
+        onSuccessfulRegister();
+      }, 2000); // Redirect after 2 seconds
     } catch (err) {
       setError(err.message);
     }
@@ -105,9 +110,14 @@ const RegistrationForm = ({ onBackToLanding }) => {
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
+          {success && (
+            <Alert>
+              <AlertDescription>Registration successful! Redirecting to home...</AlertDescription>
+            </Alert>
+          )}
           <Button type="submit" className="w-full">Register</Button>
-          <Button type="button" variant="outline" className="w-full" onClick={onBackToLanding}>
-            Back to Landing
+          <Button type="button" variant="outline" className="w-full" onClick={onBackToHome}>
+            Back to Home
           </Button>
         </form>
       </CardContent>

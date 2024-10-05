@@ -2,6 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
+const authRoutes = require('./routes/auth');
+const testRoutes = require('./routes/tests');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -18,6 +20,9 @@ const pool = new Pool({
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+app.use('/api/auth', authRoutes);
+app.use('/api/tests', testRoutes);
 
 // Test database connection
 app.get('/api/test', async (req, res) => {

@@ -5,7 +5,7 @@ import { Label } from "./ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Alert, AlertDescription } from "./ui/alert";
 
-const LoginForm = ({ onBackToLanding }) => {
+const LoginForm = ({ onBackToHome, onSuccessfulLogin }) => {
   const [formData, setFormData] = useState({
     studentId: '',
     pin: ''
@@ -40,7 +40,7 @@ const LoginForm = ({ onBackToLanding }) => {
 
       const data = await response.json();
       console.log('Login successful:', data);
-      // Handle successful login (e.g., store token, redirect)
+      onSuccessfulLogin(data.user);
     } catch (err) {
       setError(err.message);
     }
@@ -82,8 +82,8 @@ const LoginForm = ({ onBackToLanding }) => {
             </Alert>
           )}
           <Button type="submit" className="w-full">Login</Button>
-          <Button type="button" variant="outline" className="w-full" onClick={onBackToLanding}>
-            Back to Landing
+          <Button type="button" variant="outline" className="w-full" onClick={onBackToHome}>
+            Back to Home
           </Button>
         </form>
       </CardContent>
