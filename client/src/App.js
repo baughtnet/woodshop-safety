@@ -4,20 +4,27 @@ import LoginForm from './components/LoginForm';
 import RegistrationForm from './components/auth/RegistrationForm';
 import AvailableTests from './components/AvailableTests';
 import TestTaking from './components/TestTaking';
+import ReviewFailedTest from './components/ReviewFailedTest';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
   const [user, setUser] = useState(null);
   const [currentTestId, setCurrentTestId] = useState(null);
+  const [reviewTestId, setReviewTestId] = useState(null);
 
   const handleLoginClick = () => setCurrentPage('login');
   const handleRegisterClick = () => setCurrentPage('register');
   const handleBackToHome = () => setCurrentPage('home');
 
-  const handleSuccessfulLogin = (userData) => {
-    setUser(userData);
-    setCurrentPage('availableTests');
+const handleSuccessfulLogin = (userData) => {
+  // Ensure the user data has a firstName property
+  const user = {
+    ...userData,
+    firstName: userData.firstName || userData.first_name,
   };
+  setUser(user);
+  setCurrentPage('availableTests');
+};
 
   const handleSuccessfulRegister = () => {
     setCurrentPage('home');
@@ -28,8 +35,17 @@ function App() {
     setCurrentPage('takingTest');
   };
 
+  const handleReviewTest = (testId) => {
+    setReviewTestId(testId);
+    setCurrentPage('reviewTest');
+  };
+
   const handleTestComplete = (score, total) => {
     alert(`Test completed! Your score: ${score}/${total}`);
+    setCurrentPage('availableTests');
+  };
+
+  const handleBackToTests = () => {
     setCurrentPage('availableTests');
   };
 
@@ -54,13 +70,24 @@ function App() {
         />
       )}
       {currentPage === 'availableTests' && user && (
-        <AvailableTests user={user} onStartTest={handleStartTest} />
+        <AvailableTests 
+          user={user} 
+          onStartTest={handleStartTest}
+          onReviewTest={handleReviewTest}
+        />
       )}
       {currentPage === 'takingTest' && user && currentTestId && (
         <TestTaking 
           user={user} 
           testId={currentTestId} 
           onTestComplete={handleTestComplete}
+        />
+      )}
+      {currentPage === 'reviewTest' && user && reviewTestId && (
+        <ReviewFailedTest
+          user={user}
+          testId={reviewTestId}
+          onBackToTests={handleBackToTests}
         />
       )}
     </div>

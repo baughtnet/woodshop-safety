@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 
-const AvailableTests = ({ user, onStartTest }) => {
+const AvailableTests = ({ user, onStartTest, onReviewTest }) => {
   const [tests, setTests] = useState([]);
 
   useEffect(() => {
@@ -20,13 +20,15 @@ const AvailableTests = ({ user, onStartTest }) => {
     };
 
     fetchTests();
+    const interval = setInterval(fetchTests, 60000); // Refresh every minute
+    return () => clearInterval(interval);
   }, [user.id]);
 
   return (
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
         <CardTitle>Available Tests for {user.firstName}</CardTitle>
-        <CardDescription>Select a test to begin</CardDescription>
+        <CardDescription>Select a test to begin or review your attempts</CardDescription>
       </CardHeader>
       <CardContent>
         {tests.length === 0 ? (
@@ -34,14 +36,18 @@ const AvailableTests = ({ user, onStartTest }) => {
         ) : (
           <ul className="space-y-2">
             {tests.map((test) => (
-              <li key={test.id}>
-                <Button 
-                  variant="outline" 
-                  className="w-full text-left justify-between"
-                  onClick={() => onStartTest(test.id)}
-                >
-                  <span>{test.name}</span>
-                </Button>
+              <li key={test.id} className="flex justify-between items-center">
+                <span>{test.name}</span>
+                {test.score >= 95 ? (
+                  <span className="text-green-600 font-bold">Completed</span>
+                ) : test.isAvailable ? (
+                  <Button onClick={() => onStartTest(test.id)}>Start Test</Button>
+                ) : (
+                  <div className="text-right">
+                    <p>Timeout: {Math.ceil(test.timeoutRemaining)} minutes</p>
+                    <Button onClick={() => onReviewTest(test.id)}>Review Failed Attempt</Button>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
