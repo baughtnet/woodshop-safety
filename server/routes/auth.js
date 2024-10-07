@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const pool = require('../db'); // Make sure you have this file set up with your database connection
+const pool = require('../db');
 
 // Registration route
 router.post('/register', async (req, res) => {
@@ -13,7 +13,11 @@ router.post('/register', async (req, res) => {
     res.json({ success: true, userId: result.rows[0].id });
   } catch (err) {
     console.error('Registration error:', err);
-    res.status(500).json({ error: 'Registration failed' });
+    if (err.code === '23505') { // Unique violation error code
+      res.status(409).json({ error: 'A user with this student ID already exists.' });
+    } else {
+      res.status(500).json({ error: 'Registration failed', details: err.message });
+    }
   }
 });
 
@@ -29,10 +33,19 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     const user = result.rows[0];
-    res.json({ success: true, user: { id: user.id, firstName: user.first_name, lastName: user.last_name, studentId: user.student_id } });
+    res.json({ 
+      success: true, 
+      user: { 
+        id: user.id, 
+        firstName: user.first_name, 
+        lastName: user.last_name, 
+        studentId: user.student_id,
+        isAdmin: user.is_admin 
+      } 
+    });
   } catch (err) {
     console.error('Login error:', err);
-    res.status(500).json({ error: 'Login failed' });
+    res.status(500).json({ error: 'Login failed', details: err.message });
   }
 });
 

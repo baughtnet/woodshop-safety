@@ -28,7 +28,6 @@ const TestTaking = ({ user, testId, onTestComplete }) => {
         setLoading(false);
       }
     };
-
     fetchQuestions();
   }, [testId]);
 
@@ -69,7 +68,6 @@ const TestTaking = ({ user, testId, onTestComplete }) => {
   if (questions.length === 0) return <p>No questions available for this test.</p>;
 
   const currentQuestion = questions[currentQuestionIndex];
-  console.log('Current question:', currentQuestion);
 
   return (
     <Card className="w-full max-w-4xl mx-auto">
@@ -78,21 +76,17 @@ const TestTaking = ({ user, testId, onTestComplete }) => {
       </CardHeader>
       <CardContent>
         <p className="mb-4">{currentQuestion.question_text}</p>
-        {currentQuestion.answers && currentQuestion.answers.length > 0 ? (
-          <RadioGroup 
-            onValueChange={(value) => handleAnswer(currentQuestion.id, value)}
-            value={answers[currentQuestion.id] || ''}
-          >
-            {currentQuestion.answers.map((answer, index) => (
-              <div className="flex items-center space-x-2" key={index}>
-                <RadioGroupItem value={answer} id={`answer-${index}`} />
-                <Label htmlFor={`answer-${index}`}>{answer}</Label>
-              </div>
-            ))}
-          </RadioGroup>
-        ) : (
-          <p>No answer options available for this question.</p>
-        )}
+        <RadioGroup 
+          onValueChange={(value) => handleAnswer(currentQuestion.id, value)}
+          value={answers[currentQuestion.id] || ''}
+        >
+          {currentQuestion.answers.map((answer, index) => (
+            <div className="flex items-center space-x-2" key={index}>
+              <RadioGroupItem value={answer} id={`answer-${index}`} />
+              <Label htmlFor={`answer-${index}`}>{answer}</Label>
+            </div>
+          ))}
+        </RadioGroup>
         <div className="flex justify-between mt-4">
           <Button onClick={handleSkip}>Skip</Button>
           <Button onClick={handleNext}>

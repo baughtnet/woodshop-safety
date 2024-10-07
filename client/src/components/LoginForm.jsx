@@ -40,6 +40,7 @@ const LoginForm = ({ onBackToHome, onSuccessfulLogin }) => {
 
       const data = await response.json();
       console.log('Login successful:', data);
+      
       onSuccessfulLogin(data.user);
     } catch (err) {
       setError(err.message);
