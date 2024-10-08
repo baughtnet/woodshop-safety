@@ -12,10 +12,10 @@ router.get('/available/:userId', async (req, res) => {
 
     const result = await pool.query(`
       SELECT t.id, t.name, t.display_order,
-             utr.score, utr.attempt_timestamp
+             utr.score, utr.attempt_timestamp, utr.percentage
       FROM tests t
       LEFT JOIN (
-        SELECT test_id, score, attempt_timestamp
+        SELECT test_id, score, attempt_timestamp, percentage
         FROM user_test_results
         WHERE user_id = $1
         AND attempt_timestamp = (
@@ -32,7 +32,7 @@ router.get('/available/:userId', async (req, res) => {
     const now = new Date();
     const availableTests = result.rows.map(test => {
       console.log(`Processing test: ${test.name}`);
-      console.log(`Test score: ${test.score}`);
+      console.log(`Test percentage: ${test.percentage}`);
       
       const lastAttempt = test.attempt_timestamp ? new Date(test.attempt_timestamp) : null;
       console.log(`Last attempt: ${lastAttempt}`);
@@ -40,26 +40,24 @@ router.get('/available/:userId', async (req, res) => {
       const timeSinceLastAttempt = lastAttempt ? (now - lastAttempt) / 1000 / 60 : null;
       console.log(`Time since last attempt (minutes): ${timeSinceLastAttempt}`);
       
-      const passed = test.score != null && test.score >= 95;
+      const passed = test.percentage != null && test.percentage >= 95;
       console.log(`Passed: ${passed}`);
       
       const isAvailable = !lastAttempt || timeSinceLastAttempt > 5 || passed;
       console.log(`Is available: ${isAvailable}`);
 
-      const processedTest = {
+      return {
         id: test.id,
         name: test.name,
         score: test.score,
+        percentage: test.percentage,
         passed: passed,
         isAvailable: isAvailable,
         timeoutRemaining: passed ? 0 : (isAvailable ? 0 : Math.max(0, 5 - timeSinceLastAttempt))
       };
-      console.log('Processed test:', JSON.stringify(processedTest, null, 2));
-      return processedTest;
     });
 
-    console.log('Final availableTests:', JSON.stringify(availableTests, null, 2));
-
+    console.log('Sending available tests:', JSON.stringify(availableTests, null, 2));
     res.json(availableTests);
   } catch (err) {
     console.error('Error fetching available tests:', err);
