@@ -2,24 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { Select } from '../ui/select';
 import { Textarea } from '../ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { Alert, AlertDescription } from '../ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { Card, CardContent } from "../ui/card";
 
-const QuestionEditor = () => {
+const QuestionManagement = () => {
   const [tests, setTests] = useState([]);
   const [selectedTest, setSelectedTest] = useState('');
   const [questions, setQuestions] = useState([]);
   const [newQuestion, setNewQuestion] = useState({
     question_text: '',
-    option_a: '',
-    option_b: '',
-    option_c: '',
-    option_d: '',
+    answers: '',
     correct_answer: '',
   });
   const [editingQuestion, setEditingQuestion] = useState(null);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     fetchTests();
@@ -33,178 +32,173 @@ const QuestionEditor = () => {
 
   const fetchTests = async () => {
     try {
-      const response = await fetch('/api/admin/tests');
+      const response = await fetch('http://localhost:3001/api/admin/tests');
       if (response.ok) {
         const data = await response.json();
         setTests(data);
       } else {
-        console.error('Failed to fetch tests');
+        setError('Failed to fetch tests');
       }
     } catch (error) {
-      console.error('Error fetching tests:', error);
+      setError('Error fetching tests: ' + error.message);
     }
   };
 
-  const fetchQuestions = async (testId) => {
-    try {
-      const response = await fetch(`/api/admin/tests/${testId}/questions`);
-      if (response.ok) {
-        const data = await response.json();
-        setQuestions(data);
-      } else {
-        console.error('Failed to fetch questions');
-      }
-    } catch (error) {
-      console.error('Error fetching questions:', error);
+const fetchQuestions = async (testId) => {
+  try {
+    const response = await fetch(`http://localhost:3001/api/admin/tests/${testId}/questions`);
+    if (response.ok) {
+      const data = await response.json();
+      console.log('Fetched questions:', data); // Log fetched data
+      setQuestions(data);
+      console.log('Questions state after setting:', questions); // This might show the previous state due to closure
+    } else {
+      setError('Failed to fetch questions');
     }
-  };
+  } catch (error) {
+    console.error('Error fetching questions:', error);
+    setError('Error fetching questions: ' + error.message);
+  }
+};
+
+// Add this useEffect to log questions whenever they change
+useEffect(() => {
+  console.log('Questions state updated:', questions);
+}, [questions]);
+
+// In your render method, before the return statement:
+console.log('Current questions state during render:', questions);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setNewQuestion(prev => ({ ...prev, [name]: value }));
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  try {
-    if (editingQuestion) {
-      await handleUpdate();
-    } else {
-      const response = await fetch(`/api/admin/tests/${selectedTest}/questions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newQuestion),
-      });
-      if (response.ok) {
-        fetchQuestions(selectedTest);
-        setNewQuestion({
-          question_text: '',
-          option_a: '',
-          option_b: '',
-          option_c: '',
-          option_d: '',
-          correct_answer: '',
-        });
-      } else {
-        console.error('Failed to add question');
-      }
-    }
-  } catch (error) {
-    console.error('Error adding/updating question:', error);
-  }
-};
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const formattedQuestion = {
+      question_text: newQuestion.question_text,
+      answers: newQuestion.answers.split('\n').filter(answer => answer.trim() !== ''),
+      correct_answer: newQuestion.correct_answer,
+    };
 
-  const handleEdit = (question) => {
-    setEditingQuestion(question);
-    setNewQuestion(question);
+    try {
+      if (editingQuestion) {
+        await handleUpdate(formattedQuestion);
+      } else {
+        await handleAdd(formattedQuestion);
+      }
+      fetchQuestions(selectedTest);
+      resetForm();
+    } catch (error) {
+      setError('Error adding/updating question: ' + error.message);
+    }
   };
 
-  const handleUpdate = async () => {
-    try {
-      const response = await fetch(`/api/admin/questions/${editingQuestion.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newQuestion),
-      });
-      if (response.ok) {
-        fetchQuestions(selectedTest);
-        setEditingQuestion(null);
-        setNewQuestion({
-          question_text: '',
-          option_a: '',
-          option_b: '',
-          option_c: '',
-          option_d: '',
-          correct_answer: '',
-        });
-      } else {
-        console.error('Failed to update question');
-      }
-    } catch (error) {
-      console.error('Error updating question:', error);
+  const handleAdd = async (formattedQuestion) => {
+    const response = await fetch(`http://localhost:3001/api/admin/tests/${selectedTest}/questions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formattedQuestion),
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
+  };
+
+  const handleUpdate = async (formattedQuestion) => {
+    const response = await fetch(`http://localhost:3001/api/admin/questions/${editingQuestion.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formattedQuestion),
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+  };
+
+  const resetForm = () => {
+    setNewQuestion({
+      question_text: '',
+      answers: '',
+      correct_answer: '',
+    });
+    setEditingQuestion(null);
   };
 
   return (
     <div className="space-y-6">
+      {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+      
       <Card>
-        <CardHeader>
-          <CardTitle>Question Editor</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="test-select">Select Test</Label>
-              <Select
-                id="test-select"
-                value={selectedTest}
-                onChange={(e) => setSelectedTest(e.target.value)}
-              >
-                <option value="">Select a test</option>
+        <CardContent className="pt-6">
+          <div className="mb-4">
+            <Label htmlFor="test-select">Select Test</Label>
+            <Select value={selectedTest} onValueChange={setSelectedTest}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select a test" />
+              </SelectTrigger>
+              <SelectContent>
                 {tests.map((test) => (
-                  <option key={test.id} value={test.id}>{test.name}</option>
+                  <SelectItem key={test.id} value={test.id.toString()}>
+                    {test.name || `Test ${test.id}`}
+                  </SelectItem>
                 ))}
-              </Select>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="question-text">Question</Label>
-                <Textarea
-                  id="question-text"
-                  name="question_text"
-                  value={newQuestion.question_text}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-              {['a', 'b', 'c', 'd'].map((option) => (
-                <div key={option}>
-                  <Label htmlFor={`option-${option}`}>Option {option.toUpperCase()}</Label>
-                  <Input
-                    id={`option-${option}`}
-                    name={`option_${option}`}
-                    value={newQuestion[`option_${option}`]}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-              ))}
-              <div>
-                <Label htmlFor="correct-answer">Correct Answer</Label>
-                <Select
-                  id="correct-answer"
-                  name="correct_answer"
-                  value={newQuestion.correct_answer}
-                  onChange={handleInputChange}
-                  required
-                >
-                  <option value="">Select correct answer</option>
-                  {['a', 'b', 'c', 'd'].map((option) => (
-                    <option key={option} value={option}>Option {option.toUpperCase()}</option>
-                  ))}
-                </Select>
-              </div>
-              <Button type="submit">{editingQuestion ? 'Update Question' : 'Add Question'}</Button>
-              {editingQuestion && (
-                <Button type="button" onClick={() => setEditingQuestion(null)}>Cancel Edit</Button>
-              )}
-            </form>
+              </SelectContent>
+            </Select>
           </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="question-text">Question</Label>
+              <Textarea
+                id="question-text"
+                name="question_text"
+                value={newQuestion.question_text}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="answers">Answers (separate multiple answers with newlines)</Label>
+              <Textarea
+                id="answers"
+                name="answers"
+                value={newQuestion.answers}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="correct-answer">Correct Answer</Label>
+              <Input
+                id="correct-answer"
+                name="correct_answer"
+                value={newQuestion.correct_answer}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+            <Button type="submit">
+              {editingQuestion ? 'Update Question' : 'Add Question'}
+            </Button>
+            {editingQuestion && (
+              <Button type="button" onClick={resetForm} variant="outline">
+                Cancel Edit
+              </Button>
+            )}
+          </form>
         </CardContent>
       </Card>
 
       {questions.length > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle>Questions List</CardTitle>
-          </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Question</TableHead>
-                  <TableHead>Options</TableHead>
+                  <TableHead>Answers</TableHead>
                   <TableHead>Correct Answer</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -214,14 +208,26 @@ const handleSubmit = async (e) => {
                   <TableRow key={question.id}>
                     <TableCell>{question.question_text}</TableCell>
                     <TableCell>
-                      A: {question.option_a}<br />
-                      B: {question.option_b}<br />
-                      C: {question.option_c}<br />
-                      D: {question.option_d}
+                      {question.answers && question.answers.length > 0 ? (
+                        <ul>
+                          {question.answers.map((answer, index) => (
+                            <li key={index}>{answer}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <div>No answers available</div>
+                      )}
                     </TableCell>
-                    <TableCell>{question.correct_answer.toUpperCase()}</TableCell>
+                    <TableCell>{question.correct_answer}</TableCell>
                     <TableCell>
-                      <Button onClick={() => handleEdit(question)}>Edit</Button>
+                      <Button onClick={() => {
+                        setEditingQuestion(question);
+                        setNewQuestion({
+                          question_text: question.question_text,
+                          answers: Array.isArray(question.answers) ? question.answers.join('\n') : '',
+                          correct_answer: question.correct_answer || '',
+                        });
+                      }}>Edit</Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -234,4 +240,4 @@ const handleSubmit = async (e) => {
   );
 };
 
-export default QuestionEditor;
+export default QuestionManagement;

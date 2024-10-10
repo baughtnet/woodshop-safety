@@ -24,9 +24,61 @@ router.get('/tests', async (req, res) => {
     const result = await pool.query('SELECT * FROM tests ORDER BY display_order');
     res.json(result.rows);
   } catch (err) {
-    res.status(500).json({ error: 'Error fetching tests' });
+    console.error('Error fetching tests:', err);
+    res.status(500).json({ error: 'Error fetching tests', details: err.message });
   }
 });
+
+router.get('/tests/:testId/questions', async (req, res) => {
+  const { testId } = req.params;
+  try {
+    const result = await pool.query('SELECT * FROM questions WHERE test_id = $1', [testId]);
+    console.log('Raw database result:', result.rows); // Log raw database result
+    
+    const formattedQuestions = result.rows.map(question => {
+      let answers = [];
+      if (question.answers) {
+        if (Array.isArray(question.answers)) {
+          // If answers is already an array, use it directly
+          answers = question.answers;
+        } else if (typeof question.answers === 'string') {
+          // If answers is a string, try to parse it as JSON first
+          try {
+            answers = JSON.parse(question.answers);
+          } catch (e) {
+            // If parsing fails, split by common delimiters
+            const possibleDelimiters = ['\n', ';', ','];
+            for (const delimiter of possibleDelimiters) {
+              if (question.answers.includes(delimiter)) {
+                answers = question.answers.split(delimiter).map(answer => answer.trim());
+                break;
+              }
+            }
+            // If no delimiter was found, use the whole string as a single answer
+            if (answers.length === 0) {
+              answers = [question.answers.trim()];
+            }
+          }
+        }
+      }
+      console.log(`Processed answers for question ${question.id}:`, answers); // Log processed answers
+      
+      return {
+        id: question.id,
+        question_text: question.question_text,
+        answers: answers,
+        correct_answer: question.correct_answer
+      };
+    });
+    
+    console.log('Formatted questions:', formattedQuestions); // Log formatted questions
+    res.json(formattedQuestions);
+  } catch (err) {
+    console.error('Error fetching questions:', err);
+    res.status(500).json({ error: 'Error fetching questions', details: err.message });
+  }
+});
+
 // Update test details
 router.put('/tests/:testId', async (req, res) => {
   const { testId } = req.params;
@@ -41,16 +93,48 @@ router.put('/tests/:testId', async (req, res) => {
     res.status(500).json({ error: 'Error updating test' });
   }
 });
+
 // Get questions for a specific test
 router.get('/tests/:testId/questions', async (req, res) => {
   const { testId } = req.params;
   try {
     const result = await pool.query('SELECT * FROM questions WHERE test_id = $1', [testId]);
-    res.json(result.rows);
+    console.log('Raw database result:', result.rows); // Log raw database result
+    
+    const formattedQuestions = result.rows.map(question => {
+      let answers = [];
+      if (question.answers) {
+        // Try to split answers by common delimiters
+        const possibleDelimiters = ['\n', ';', ','];
+        for (const delimiter of possibleDelimiters) {
+          if (question.answers.includes(delimiter)) {
+            answers = question.answers.split(delimiter).map(answer => answer.trim());
+            break;
+          }
+        }
+        // If no delimiter was found, use the whole string as a single answer
+        if (answers.length === 0) {
+          answers = [question.answers.trim()];
+        }
+      }
+      console.log(`Processed answers for question ${question.id}:`, answers); // Log processed answers
+      
+      return {
+        id: question.id,
+        question_text: question.question_text,
+        answers: answers,
+        correct_answer: question.correct_answer
+      };
+    });
+    
+    console.log('Formatted questions:', formattedQuestions); // Log formatted questions
+    res.json(formattedQuestions);
   } catch (err) {
-    res.status(500).json({ error: 'Error fetching questions' });
+    console.error('Error fetching questions:', err);
+    res.status(500).json({ error: 'Error fetching questions', details: err.message });
   }
 });
+
 // Update a question
 router.put('/questions/:questionId', async (req, res) => {
   const { questionId } = req.params;
@@ -65,4 +149,20 @@ router.put('/questions/:questionId', async (req, res) => {
     res.status(500).json({ error: 'Error updating question' });
   }
 });
+
+router.post('/tests/:testId/questions', async (req, res) => {
+  const { testId } = req.params;
+  const { question_text, answers, correct_answer } = req.body;
+  try {
+    const result = await pool.query(
+      'INSERT INTO questions (test_id, question_text, answers, correct_answer) VALUES ($1, $2, $3, $4) RETURNING *',
+      [testId, question_text, JSON.stringify(answers), correct_answer]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('Error adding question:', err);
+    res.status(500).json({ error: 'Error adding question', details: err.message });
+  }
+});
+
 module.exports = router;
