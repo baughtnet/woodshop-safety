@@ -4,6 +4,7 @@ const cors = require('cors');
 const { Pool } = require('pg');
 const authRoutes = require('./routes/auth');
 const testRoutes = require('./routes/tests');
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -23,6 +24,7 @@ app.use(express.json());
 
 app.use('/api/auth', authRoutes);
 app.use('/api/tests', testRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Test database connection
 app.get('/api/test', async (req, res) => {
@@ -77,16 +79,29 @@ app.post('/api/register', async (req, res) => {
  
 // User login
 app.post('/api/login', async (req, res) => {
-  const { studentId, pin } = req.body;
   try {
+    const { studentId, pin } = req.body;
     const result = await pool.query(
       'SELECT * FROM users WHERE student_id = $1 AND pin_hash = $2',
-      [studentId, pin] // In production, compare hashed PINs
+      [studentId, pin]
     );
+    
     if (result.rows.length === 0) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
-    res.json({ success: true, user: result.rows[0] });
+    
+    const user = result.rows[0];
+    
+    res.json({ 
+      success: true, 
+      user: { 
+        id: user.id, 
+        firstName: user.first_name, 
+        lastName: user.last_name, 
+        studentId: user.student_id,
+        isAdmin: user.is_admin 
+      } 
+    });
   } catch (err) {
     console.error('Login error:', err);
     res.status(500).json({ error: 'Login failed' });

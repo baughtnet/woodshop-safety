@@ -12,6 +12,8 @@ const LoginForm = ({ onBackToHome, onSuccessfulLogin }) => {
   });
   const [error, setError] = useState('');
 
+  const [isLoading, setIsLoading] = useState(false);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prevState => ({
@@ -32,17 +34,21 @@ const LoginForm = ({ onBackToHome, onSuccessfulLogin }) => {
         },
         body: JSON.stringify(formData),
       });
+      const data = await response.json();
 
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Login failed');
       }
-
-      const data = await response.json();
       console.log('Login successful:', data);
-      onSuccessfulLogin(data.user);
+      onSuccessfulLogin({
+        ...data.user,
+        isAdmin: data.user.isAdmin
+      });
     } catch (err) {
       setError(err.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -62,7 +68,8 @@ const LoginForm = ({ onBackToHome, onSuccessfulLogin }) => {
               type="text"
               required
               value={formData.studentId}
-              onChange={handleInputChange}
+              onChange={handleInputChange} disabled={isLoading}
+
             />
           </div>
           <div className="space-y-2">
@@ -73,7 +80,7 @@ const LoginForm = ({ onBackToHome, onSuccessfulLogin }) => {
               type="password"
               required
               value={formData.pin}
-              onChange={handleInputChange}
+              onChange={handleInputChange} disabled={isLoading}
             />
           </div>
           {error && (
@@ -81,9 +88,10 @@ const LoginForm = ({ onBackToHome, onSuccessfulLogin }) => {
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-          <Button type="submit" className="w-full">Login</Button>
-          <Button type="button" variant="outline" className="w-full" onClick={onBackToHome}>
-            Back to Home
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? 'Logging in...' : 'Login'}
+          </Button>
+          <Button type="button" variant="outline" className="w-full" onClick={onBackToHome} disabled={isLoading}>            Back to Home
           </Button>
         </form>
       </CardContent>
