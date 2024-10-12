@@ -19,7 +19,10 @@ const pool = new Pool({
 });
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:3000', // or whatever your frontend URL is
+  credentials: true
+}));
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);

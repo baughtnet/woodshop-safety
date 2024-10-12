@@ -235,9 +235,7 @@ console.log('Current questions state during render:', questions);
             </Table>
           </CardContent>
         </Card>
-      )}
+)}
     </div>
   );
-};
-
-export default QuestionManagement;
+}

@@ -4,6 +4,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Alert, AlertDescription } from '../ui/alert';
+
 const TestManagement = () => {
   const [tests, setTests] = useState([]);
   const [newTest, setNewTest] = useState({ name: '', description: '', display_order: 0, total_questions: 0 });
@@ -25,6 +26,7 @@ const TestManagement = () => {
       setError('Error fetching tests: ' + error.message);
     }
   };
+
   const handleAddTest = async (e) => {
     e.preventDefault();
     try {
@@ -43,6 +45,7 @@ const TestManagement = () => {
       setError('Error adding test: ' + error.message);
     }
   };
+
   const handleEditTest = async (e) => {
     e.preventDefault();
     try {
@@ -61,6 +64,7 @@ const TestManagement = () => {
       setError('Error updating test: ' + error.message);
     }
   };
+
   return (
     <div>
       {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
@@ -116,6 +120,7 @@ const TestManagement = () => {
           <Button type="button" onClick={() => setEditingTest(null)}>Cancel Edit</Button>
         )}
       </form>
+
       <Table>
         <TableHeader>
           <TableRow>
@@ -143,4 +148,5 @@ const TestManagement = () => {
     </div>
   );
 };
+
 export default TestManagement;

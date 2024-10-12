@@ -11,7 +11,6 @@ const LoginForm = ({ onBackToHome, onSuccessfulLogin }) => {
     pin: ''
   });
   const [error, setError] = useState('');
-
   const [isLoading, setIsLoading] = useState(false);
 
   const handleInputChange = (e) => {
@@ -25,9 +24,10 @@ const LoginForm = ({ onBackToHome, onSuccessfulLogin }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
     
     try {
-      const response = await fetch('http://localhost:3001/api/login', {
+      const response = await fetch('http://localhost:3001/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -37,8 +37,7 @@ const LoginForm = ({ onBackToHome, onSuccessfulLogin }) => {
       const data = await response.json();
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Login failed');
+        throw new Error(data.error || 'Login failed');
       }
       console.log('Login successful:', data);
       onSuccessfulLogin({
@@ -69,7 +68,6 @@ const LoginForm = ({ onBackToHome, onSuccessfulLogin }) => {
               required
               value={formData.studentId}
               onChange={handleInputChange} disabled={isLoading}
-
             />
           </div>
           <div className="space-y-2">
@@ -91,7 +89,8 @@ const LoginForm = ({ onBackToHome, onSuccessfulLogin }) => {
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? 'Logging in...' : 'Login'}
           </Button>
-          <Button type="button" variant="outline" className="w-full" onClick={onBackToHome} disabled={isLoading}>            Back to Home
+          <Button type="button" variant="outline" className="w-full" onClick={onBackToHome} disabled={isLoading}>
+            Back to Home
           </Button>
         </form>
       </CardContent>

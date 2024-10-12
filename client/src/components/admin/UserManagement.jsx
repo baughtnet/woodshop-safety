@@ -10,6 +10,7 @@ const UserManagement = () => {
     };
     fetchUsers();
   }, []);
+
   return (
     <Table>
       <TableHeader>
@@ -37,4 +38,5 @@ const UserManagement = () => {
     </Table>
   );
 };
+
 export default UserManagement;
