@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
-import UserManagement from './admin/UserManagement';
-import TestManagement from './admin/TestManagement';
-import QuestionManagement from './admin/QuestionManagement';
+import UserManagement from './UserManagement';
+import TestManagement from './TestManagement';
+import QuestionManagement from './QuestionManagement';
 
 const AdminPanel = () => {
   const [activeSection, setActiveSection] = useState('users');

@@ -239,3 +239,5 @@ console.log('Current questions state during render:', questions);
     </div>
   );
 }
+
+export default QuestionManagement;
