@@ -3,13 +3,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { Label } from "./ui/label";
+import { Progress } from "./ui/progress";
 
 const TestTaking = ({ user, testId, onTestComplete }) => {
   const [questions, setQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
+  const [flaggedQuestions, setFlaggedQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [timeRemaining, setTimeRemaining] = useState(3600); // 1 hour in seconds
 
   useEffect(() => {
     const fetchQuestions = async () => {
@@ -36,11 +39,24 @@ const TestTaking = ({ user, testId, onTestComplete }) => {
     setAnswers(prev => ({ ...prev, [questionId]: answer }));
   };
 
+  const handleFlag = () => {
+    const questionId = questions[currentQuestionIndex].id;
+    setFlaggedQuestions(prev => 
+      prev.includes(questionId) ? prev.filter(id => id !== questionId) : [...prev, questionId]
+    );
+  };
+
   const handleNext = () => {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
       handleSubmit();
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(prev => prev - 1);
     }
   };
 
@@ -64,37 +80,53 @@ const TestTaking = ({ user, testId, onTestComplete }) => {
     }
   };
 
+useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeRemaining(prev => {
+        if (prev <= 0) {
+          clearInterval(timer);
+          handleSubmit();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
   if (loading) return <p>Loading questions...</p>;
   if (error) return <p>Error: {error}</p>;
   if (questions.length === 0) return <p>No questions available for this test.</p>;
 
   const currentQuestion = questions[currentQuestionIndex];
-  console.log('Current question:', currentQuestion);
+  const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
 
   return (
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
         <CardTitle>Question {currentQuestionIndex + 1} of {questions.length}</CardTitle>
+        <Progress value={progress} className="w-full" />
+        <div>Time remaining: {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}</div>
       </CardHeader>
       <CardContent>
         <p className="mb-4">{currentQuestion.question_text}</p>
-        {currentQuestion.answers && currentQuestion.answers.length > 0 ? (
-          <RadioGroup 
-            onValueChange={(value) => handleAnswer(currentQuestion.id, value)}
-            value={answers[currentQuestion.id] || ''}
-          >
-            {currentQuestion.answers.map((answer, index) => (
-              <div className="flex items-center space-x-2" key={index}>
-                <RadioGroupItem value={answer} id={`answer-${index}`} />
-                <Label htmlFor={`answer-${index}`}>{answer}</Label>
-              </div>
-            ))}
-          </RadioGroup>
-        ) : (
-          <p>No answer options available for this question.</p>
-        )}
+        <RadioGroup 
+          onValueChange={(value) => handleAnswer(currentQuestion.id, value)}
+          value={answers[currentQuestion.id] || ''}
+        >
+          {currentQuestion.answers.map((answer, index) => (
+            <div className="flex items-center space-x-2" key={index}>
+              <RadioGroupItem value={answer} id={`answer-${index}`} />
+              <Label htmlFor={`answer-${index}`}>{answer}</Label>
+            </div>
+          ))}
+        </RadioGroup>
         <div className="flex justify-between mt-4">
-          <Button onClick={handleSkip}>Skip</Button>
+          <Button onClick={handlePrevious} disabled={currentQuestionIndex === 0}>Previous</Button>
+          <Button onClick={handleFlag}>
+            {flaggedQuestions.includes(currentQuestion.id) ? 'Unflag' : 'Flag for Review'}
+          </Button>
           <Button onClick={handleNext}>
             {currentQuestionIndex === questions.length - 1 ? 'Submit' : 'Next'}
           </Button>
