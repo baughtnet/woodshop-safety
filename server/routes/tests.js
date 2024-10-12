@@ -1,9 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const pool = require('../db'); // Assuming you have a db connection setup
-
-// Get available tests for a user
-// In your server/routes/tests.js file
+const pool = require('../db');
 
 router.get('/available/:userId', async (req, res) => {
   try {
@@ -11,18 +8,18 @@ router.get('/available/:userId', async (req, res) => {
     console.log(`Fetching tests for user ID: ${userId}`);
 
     const result = await pool.query(`
-      SELECT t.id, t.name, t.display_order,
-             utr.score, utr.attempt_timestamp, utr.percentage
+      SELECT t.id, t.name, utr.score, utr.percentage, utr.attempt_timestamp
       FROM tests t
       LEFT JOIN (
-        SELECT test_id, score, attempt_timestamp, percentage
+        SELECT DISTINCT ON (test_id) 
+          test_id, 
+          user_id, 
+          score, 
+          percentage, 
+          attempt_timestamp
         FROM user_test_results
         WHERE user_id = $1
-        AND attempt_timestamp = (
-          SELECT MAX(attempt_timestamp)
-          FROM user_test_results
-          WHERE user_id = $1 AND test_id = user_test_results.test_id
-        )
+        ORDER BY test_id, attempt_timestamp DESC
       ) utr ON t.id = utr.test_id
       ORDER BY t.display_order
     `, [userId]);
@@ -97,45 +94,42 @@ router.get('/:testId/questions', async (req, res) => {
   }
 });
 
-// Submit test results
 router.post('/:testId/submit', async (req, res) => {
+  const client = await pool.connect();
   try {
+    await client.query('BEGIN');
+
     const { testId } = req.params;
     const { userId, answers, score } = req.body;
-    const client = await pool.connect();
 
-    try {
-      await client.query('BEGIN');
+    // Insert test result
+    const insertResult = await client.query(
+      'INSERT INTO user_test_results (user_id, test_id, score, answers, attempt_timestamp) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP) RETURNING id, percentage',
+      [userId, testId, score, JSON.stringify(answers)]
+    );
 
-      const insertResult = await client.query(
-        'INSERT INTO user_test_results (user_id, test_id, score, answers, attempt_timestamp) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP) RETURNING id',
-        [userId, testId, score, JSON.stringify(answers)]
-      );
+    const userTestResultId = insertResult.rows[0].id;
+    const percentage = insertResult.rows[0].percentage;
 
-      const userTestResultId = insertResult.rows[0].id;
-
-      // Store failed questions
-      const questions = await client.query('SELECT id, correct_answer FROM questions WHERE test_id = $1', [testId]);
-      for (let question of questions.rows) {
-        if (answers[question.id] !== question.correct_answer) {
-          await client.query(
-            'INSERT INTO failed_questions (user_test_result_id, question_id, selected_answer) VALUES ($1, $2, $3)',
-            [userTestResultId, question.id, answers[question.id]]
-          );
-        }
+    // Fetch correct answers and store failed questions
+    const questions = await client.query('SELECT id, correct_answer FROM questions WHERE test_id = $1', [testId]);
+    for (let question of questions.rows) {
+      if (answers[question.id] !== question.correct_answer) {
+        await client.query(
+          'INSERT INTO failed_questions (user_test_result_id, question_id, selected_answer) VALUES ($1, $2, $3)',
+          [userTestResultId, question.id, answers[question.id]]
+        );
       }
-
-      await client.query('COMMIT');
-      res.json({ message: 'Test results submitted successfully' });
-    } catch (e) {
-      await client.query('ROLLBACK');
-      throw e;
-    } finally {
-      client.release();
     }
+
+    await client.query('COMMIT');
+    res.json({ message: 'Test results submitted successfully', percentage });
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Error submitting test results:', err);
-    res.status(500).json({ error: 'Failed to submit test results' });
+    res.status(500).json({ error: 'Failed to submit test results', details: err.message });
+  } finally {
+    client.release();
   }
 });
 

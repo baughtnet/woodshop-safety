@@ -15,7 +15,7 @@ const AvailableTests = ({ user, onStartTest, onReviewTest }) => {
           throw new Error('Failed to fetch available tests');
         }
         const data = await response.json();
-        console.log('Fetched tests:', data); // Log the fetched data
+        console.log('Fetched tests:', data); // Keep this log
         setTests(data);
         setLoading(false);
       } catch (error) {
@@ -24,7 +24,6 @@ const AvailableTests = ({ user, onStartTest, onReviewTest }) => {
         setLoading(false);
       }
     };
-
     fetchTests();
   }, [user.id]);
 
@@ -47,14 +46,10 @@ const AvailableTests = ({ user, onStartTest, onReviewTest }) => {
             )}
             {test.passed ? (
               <p className="text-green-600">Passed</p>
+            ) : test.isAvailable ? (
+              <Button onClick={() => onStartTest(test.id)}>Start Test</Button>
             ) : (
-              <>
-                {test.isAvailable ? (
-                  <Button onClick={() => onStartTest(test.id)}>Start Test</Button>
-                ) : (
-                  <p>Available in {Math.ceil(test.timeoutRemaining)} minutes</p>
-                )}
-              </>
+              <p>Available in {Math.ceil(test.timeoutRemaining)} minutes</p>
             )}
             {!test.passed && test.percentage != null && (
               <Button onClick={() => onReviewTest(test.id)} className="ml-2">Review Last Attempt</Button>

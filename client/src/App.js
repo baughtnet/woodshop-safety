@@ -49,10 +49,12 @@ function App() {
     setCurrentPage('reviewTest');
   };
 
-  const handleTestComplete = (score, total) => {
-    alert(`Test completed! Your score: ${score}/${total}`);
-    setCurrentPage('availableTests');
-  };
+const handleTestComplete = (score, total, percentage, passed) => {
+  const message = `Test completed! Your score: ${score}/${total} (${percentage}%)
+${passed ? 'Congratulations! You passed.' : 'Sorry, you did not pass. The minimum required score is 95%.'}`;
+  alert(message);
+  setCurrentPage('availableTests');
+};
 
   const handleBackToTests = () => {
     setCurrentPage('availableTests');
