@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { Label } from "./ui/label";
+import { Progress } from "./ui/progress";
 
 const TestTaking = ({ user, testId, onTestComplete }) => {
   const [questions, setQuestions] = useState([]);
@@ -14,6 +15,7 @@ const TestTaking = ({ user, testId, onTestComplete }) => {
   const [skippedQuestions, setSkippedQuestions] = useState([]);
   const [timeRemaining, setTimeRemaining] = useState(3600); // 1 hour in seconds
   const [showSummary, setShowSummary] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     const fetchQuestions = async () => {
@@ -34,6 +36,10 @@ const TestTaking = ({ user, testId, onTestComplete }) => {
 
     fetchQuestions();
   }, [testId]);
+
+  useEffect(() => {
+    setProgress((currentQuestionIndex / questions.length) * 100);
+  }, [currentQuestionIndex, questions.length]);
 
 
   const handleAnswer = (questionId, answer) => {
@@ -76,7 +82,7 @@ const TestTaking = ({ user, testId, onTestComplete }) => {
     );
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     try {
       const score = questions.reduce((acc, q) => answers[q.id] === q.correct_answer ? acc + 1 : acc, 0);
       const timeSpent = 3600 - timeRemaining;
@@ -88,18 +94,19 @@ const TestTaking = ({ user, testId, onTestComplete }) => {
           answers,
           score,
           timeSpent
-        })
+        }),
       });
-      if (!response.ok) {
-        throw new Error('Failed to submit test results');
-      }
       const data = await response.json();
-      onTestComplete(score, questions.length, data.percentage, data.passed);
+      if (response.ok) {
+        onTestComplete(score, questions.length, data.percentage, data.passed);
+      } else {
+        throw new Error(data.error || 'Failed to submit test results');
+      }
     } catch (error) {
       console.error('Error submitting test:', error);
       setError('Failed to submit test results');
     }
-  };
+  }, [testId, user.id, answers, questions, onTestComplete, timeRemaining]);
 
   const handleGoToQuestion = (index) => {
     setCurrentQuestionIndex(index);
@@ -160,6 +167,7 @@ const TestTaking = ({ user, testId, onTestComplete }) => {
       <CardHeader>
         <CardTitle>Question {currentQuestionIndex + 1} of {questions.length}</CardTitle>
         <div>Time Remaining: {minutes}:{seconds < 10 ? '0' : ''}{seconds}</div>
+        <Progress value={progress} className="w-full" />
       </CardHeader>
       <CardContent>
         <p className="mb-4">{currentQuestion.question_text}</p>
