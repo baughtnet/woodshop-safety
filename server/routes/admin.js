@@ -79,6 +79,45 @@ router.get('/tests/:testId/questions', async (req, res) => {
   }
 });
 
+
+// router.get('/user-progress/:userId', async (req, res) => {
+//   const { userId } = req.params;
+//   try {
+//     const result = await pool.query(`
+//       SELECT t.name AS test_name, utr.score, utr.percentage, utr.attempt_timestamp
+//       FROM user_test_results utr
+//       JOIN tests t ON utr.test_id = t.id
+//       WHERE utr.user_id = $1
+//       ORDER BY utr.attempt_timestamp DESC
+//     `, [userId]);
+//     res.json(result.rows);
+//   } catch (error) {
+//     console.error('Error fetching user progress:', error);
+//     res.status(500).json({ error: 'Failed to fetch user progress' });
+//   }
+// });
+
+router.get('/students-progress', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT u.id, u.first_name, u.last_name, u.student_id,
+             json_agg(json_build_object(
+               'test_name', t.name,
+               'percentage', utr.percentage
+             )) as test_results
+      FROM users u
+      LEFT JOIN user_test_results utr ON u.id = utr.user_id
+      LEFT JOIN tests t ON utr.test_id = t.id
+      GROUP BY u.id, u.first_name, u.last_name, u.student_id
+      ORDER BY u.last_name, u.first_name
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching students progress:', error);
+    res.status(500).json({ error: 'Failed to fetch students progress' });
+  }
+});
+
 // Update test details
 router.put('/tests/:testId', async (req, res) => {
   const { testId } = req.params;
@@ -162,6 +201,42 @@ router.post('/tests/:testId/questions', async (req, res) => {
   } catch (err) {
     console.error('Error adding question:', err);
     res.status(500).json({ error: 'Error adding question', details: err.message });
+  }
+});
+
+router.get('/dashboard', async (req, res) => {
+  try {
+    // Get total users
+    const userResult = await pool.query('SELECT COUNT(*) FROM users');
+    const totalUsers = parseInt(userResult.rows[0].count);
+
+    // Get total tests
+    const testResult = await pool.query('SELECT COUNT(*) FROM tests');
+    const totalTests = parseInt(testResult.rows[0].count);
+
+    // Get total questions
+    const questionResult = await pool.query('SELECT COUNT(*) FROM questions');
+    const totalQuestions = parseInt(questionResult.rows[0].count);
+
+    // Get recent test results
+    const recentTestResults = await pool.query(`
+      SELECT u.first_name || ' ' || u.last_name AS user_name, t.name AS test_name, utr.percentage AS score
+      FROM user_test_results utr
+      JOIN users u ON utr.user_id = u.id
+      JOIN tests t ON utr.test_id = t.id
+      ORDER BY utr.attempt_timestamp DESC
+      LIMIT 5
+    `);
+
+    res.json({
+      totalUsers,
+      totalTests,
+      totalQuestions,
+      recentTestResults: recentTestResults.rows
+    });
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+    res.status(500).json({ error: 'Failed to fetch dashboard stats' });
   }
 });
 

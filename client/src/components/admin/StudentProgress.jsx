@@ -5,26 +5,38 @@ import { Input } from "../ui/input";
 const StudentProgress = () => {
   const [students, setStudents] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
+    const fetchStudents = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('http://localhost:3001/api/admin/students-progress');
+        if (!response.ok) {
+          throw new Error('Failed to fetch students progress');
+        }
+        const data = await response.json();
+        setStudents(data);
+      } catch (error) {
+        console.error('Error fetching students progress:', error);
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchStudents();
   }, []);
-
-  const fetchStudents = async () => {
-    try {
-      const response = await fetch('http://localhost:3001/api/admin/users');
-      const data = await response.json();
-      setStudents(data);
-    } catch (error) {
-      console.error('Error fetching students:', error);
-    }
-  };
 
   const filteredStudents = students.filter(student => 
     student.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     student.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     student.student_id.includes(searchTerm)
   );
+
+  if (loading) return <p>Loading student progress...</p>;
+  if (error) return <p>Error: {error}</p>;
 
   return (
     <div>
@@ -51,7 +63,7 @@ const StudentProgress = () => {
               <TableCell>
                 {student.test_results.map((result, index) => (
                   <div key={index}>
-                    Test ID: {result.test_id}, Score: {result.percentage}%
+                    Test Name: {result.test_id}, Score: {result.percentage}%
                   </div>
                 ))}
               </TableCell>

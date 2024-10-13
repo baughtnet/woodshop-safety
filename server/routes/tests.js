@@ -95,41 +95,43 @@ router.get('/:testId/questions', async (req, res) => {
 });
 
 router.post('/:testId/submit', async (req, res) => {
-  const client = await pool.connect();
   try {
-    await client.query('BEGIN');
-
     const { testId } = req.params;
-    const { userId, answers, score } = req.body;
+    const { userId, answers, score, timeSpent } = req.body;
+    const client = await pool.connect();
 
-    // Insert test result
-    const insertResult = await client.query(
-      'INSERT INTO user_test_results (user_id, test_id, score, answers, attempt_timestamp) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP) RETURNING id, percentage',
-      [userId, testId, score, JSON.stringify(answers)]
-    );
+    try {
+      await client.query('BEGIN');
 
-    const userTestResultId = insertResult.rows[0].id;
-    const percentage = insertResult.rows[0].percentage;
+      const insertResult = await client.query(
+        'INSERT INTO user_test_results (user_id, test_id, score, answers, attempt_timestamp, time_spent) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, $5) RETURNING id, percentage, passed',
+        [userId, testId, score, JSON.stringify(answers), timeSpent]
+      );
 
-    // Fetch correct answers and store failed questions
-    const questions = await client.query('SELECT id, correct_answer FROM questions WHERE test_id = $1', [testId]);
-    for (let question of questions.rows) {
-      if (answers[question.id] !== question.correct_answer) {
-        await client.query(
-          'INSERT INTO failed_questions (user_test_result_id, question_id, selected_answer) VALUES ($1, $2, $3)',
-          [userTestResultId, question.id, answers[question.id]]
-        );
+      const { id: userTestResultId, percentage, passed } = insertResult.rows[0];
+
+      // Store failed questions
+      const questions = await client.query('SELECT id, correct_answer FROM questions WHERE test_id = $1', [testId]);
+      for (let question of questions.rows) {
+        if (answers[question.id] !== question.correct_answer) {
+          await client.query(
+            'INSERT INTO failed_questions (user_test_result_id, question_id, selected_answer) VALUES ($1, $2, $3)',
+            [userTestResultId, question.id, answers[question.id]]
+          );
+        }
       }
-    }
 
-    await client.query('COMMIT');
-    res.json({ message: 'Test results submitted successfully', percentage });
-  } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('Error submitting test results:', err);
-    res.status(500).json({ error: 'Failed to submit test results', details: err.message });
-  } finally {
-    client.release();
+      await client.query('COMMIT');
+      res.json({ message: 'Test submitted successfully', percentage, passed });
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error submitting test results:', error);
+    res.status(500).json({ error: 'Failed to submit test results' });
   }
 });
 
@@ -155,5 +157,6 @@ router.get('/:testId/review/:userId', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch review questions' });
   }
 });
+
 
 module.exports = router;

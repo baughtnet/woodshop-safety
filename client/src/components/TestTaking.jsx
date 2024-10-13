@@ -1,57 +1,19 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { Label } from "./ui/label";
-import { Progress } from "./ui/progress";
 
 const TestTaking = ({ user, testId, onTestComplete }) => {
   const [questions, setQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
-  const [flaggedQuestions, setFlaggedQuestions] = useState([]);
-  const [skippedQuestions, setSkippedQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showSummary, setShowSummary] = useState(false);
+  const [flaggedQuestions, setFlaggedQuestions] = useState([]);
+  const [skippedQuestions, setSkippedQuestions] = useState([]);
   const [timeRemaining, setTimeRemaining] = useState(3600); // 1 hour in seconds
-
-const handleSubmit = useCallback(async () => {
-  try {
-    // Calculate raw score (number of correct answers)
-    const correctAnswers = questions.reduce((acc, question) => {
-      acc[question.id] = question.correct_answer;
-      return acc;
-    }, {});
-
-    const rawScore = Object.keys(answers).reduce((count, questionId) => {
-      return answers[questionId] === correctAnswers[questionId] ? count + 1 : count;
-    }, 0);
-
-    console.log('Raw score:', rawScore); // Keeping this log
-
-    const response = await fetch(`http://localhost:3001/api/tests/${testId}/submit`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: user.id, answers, score: rawScore, testId })
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to submit test');
-    }
-
-    const data = await response.json();
-    console.log('Response data:', data); // Keeping this log
-
-    const percentage = data.percentage || (rawScore / questions.length * 100);
-    const passed = percentage >= 95;
-
-    onTestComplete(rawScore, questions.length, percentage.toFixed(2), passed);
-  } catch (error) {
-    console.error('Error submitting test:', error);
-    setError('Failed to submit test results');
-  }
-}, [testId, user.id, answers, questions, onTestComplete]);
+  const [showSummary, setShowSummary] = useState(false);
 
   useEffect(() => {
     const fetchQuestions = async () => {
@@ -61,7 +23,6 @@ const handleSubmit = useCallback(async () => {
           throw new Error('Failed to fetch test questions');
         }
         const data = await response.json();
-        console.log('Fetched questions:', data);
         setQuestions(data);
         setLoading(false);
       } catch (error) {
@@ -74,43 +35,21 @@ const handleSubmit = useCallback(async () => {
     fetchQuestions();
   }, [testId]);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeRemaining(prev => {
-        if (prev <= 0) {
-          clearInterval(timer);
-          handleSubmit();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [handleSubmit]);
 
   const handleAnswer = (questionId, answer) => {
-    setAnswers(prev => ({ ...prev, [questionId]: answer }));
-  };
-
-  const handleFlag = () => {
-    const questionId = questions[currentQuestionIndex].id;
-    setFlaggedQuestions(prev => 
-      prev.includes(questionId) ? prev.filter(id => id !== questionId) : [...prev, questionId]
-    );
+    setAnswers(prev => ({
+      ...prev,
+      [questionId]: answer
+    }));
+    setFlaggedQuestions(prev => prev.filter(id => id !== questionId));
+    setSkippedQuestions(prev => prev.filter(id => id !== questionId));
   };
 
   const handleNext = () => {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
-      if (skippedQuestions.length > 0) {
-        const nextSkippedIndex = questions.findIndex(q => q.id === skippedQuestions[0]);
-        setCurrentQuestionIndex(nextSkippedIndex);
-        setSkippedQuestions(prev => prev.slice(1));
-      } else {
-        setShowSummary(true);
-      }
+      setShowSummary(true);
     }
   };
 
@@ -122,16 +61,70 @@ const handleSubmit = useCallback(async () => {
 
   const handleSkip = () => {
     const currentQuestionId = questions[currentQuestionIndex].id;
-    setSkippedQuestions(prev => [...prev, currentQuestionId]);
+    if (!skippedQuestions.includes(currentQuestionId)) {
+      setSkippedQuestions(prev => [...prev, currentQuestionId]);
+    }
     handleNext();
   };
+
+  const handleFlag = () => {
+    const currentQuestionId = questions[currentQuestionIndex].id;
+    setFlaggedQuestions(prev => 
+      prev.includes(currentQuestionId)
+        ? prev.filter(id => id !== currentQuestionId)
+        : [...prev, currentQuestionId]
+    );
+  };
+
+  const handleSubmit = async () => {
+    try {
+      const score = questions.reduce((acc, q) => answers[q.id] === q.correct_answer ? acc + 1 : acc, 0);
+      const timeSpent = 3600 - timeRemaining;
+      const response = await fetch(`http://localhost:3001/api/tests/${testId}/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          answers,
+          score,
+          timeSpent
+        })
+      });
+      if (!response.ok) {
+        throw new Error('Failed to submit test results');
+      }
+      const data = await response.json();
+      onTestComplete(score, questions.length, data.percentage, data.passed);
+    } catch (error) {
+      console.error('Error submitting test:', error);
+      setError('Failed to submit test results');
+    }
+  };
+
+  const handleGoToQuestion = (index) => {
+    setCurrentQuestionIndex(index);
+    setShowSummary(false);
+  };
+
+  useEffect(() => {
+  const timer = setInterval(() => {
+    setTimeRemaining((prevTime) => {
+      if (prevTime <= 0) {
+        clearInterval(timer);
+        handleSubmit();
+        return 0;
+      }
+      return prevTime - 1;
+    });
+  }, 1000);
+
+  return () => clearInterval(timer);
+}, [handleSubmit]);
+
 
   if (loading) return <p>Loading questions...</p>;
   if (error) return <p>Error: {error}</p>;
   if (questions.length === 0) return <p>No questions available for this test.</p>;
-
-  const currentQuestion = questions[currentQuestionIndex];
-  const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
 
   if (showSummary) {
     return (
@@ -140,66 +133,62 @@ const handleSubmit = useCallback(async () => {
           <CardTitle>Test Summary</CardTitle>
         </CardHeader>
         <CardContent>
-          <p>Total Questions: {questions.length}</p>
-          <p>Answered Questions: {Object.keys(answers).length}</p>
-          <p>Flagged Questions: {flaggedQuestions.length}</p>
-          <p>Unanswered Questions: {questions.length - Object.keys(answers).length}</p>
-          <div className="mt-4">
-            <h3 className="font-semibold">Question Status:</h3>
-            {questions.map((question, index) => (
-              <div key={question.id} className="flex justify-between items-center my-2">
-                <span>Question {index + 1}:</span>
-                <span>
-                  {answers[question.id] ? 'Answered' : 'Unanswered'}
-                  {flaggedQuestions.includes(question.id) ? ' (Flagged)' : ''}
-                </span>
-                <Button onClick={() => {
-                  setShowSummary(false);
-                  setCurrentQuestionIndex(index);
-                }}>
-                  Review
-                </Button>
-              </div>
-            ))}
-          </div>
-          <div className="mt-6 flex justify-between">
-            <Button onClick={() => setShowSummary(false)}>Back to Test</Button>
-            <Button onClick={handleSubmit}>Submit Test</Button>
-          </div>
+          {questions.map((question, index) => (
+            <div key={question.id} className="mb-4 p-2 border rounded">
+              <p className="font-bold">Question {index + 1}: {question.question_text}</p>
+              <p>Your answer: {answers[question.id] || 'Not answered'}</p>
+              <p>Status: {
+                flaggedQuestions.includes(question.id) ? 'Flagged' :
+                skippedQuestions.includes(question.id) ? 'Skipped' :
+                answers[question.id] ? 'Answered' : 'Not answered'
+              }</p>
+              <Button onClick={() => handleGoToQuestion(index)}>Review Question</Button>
+            </div>
+          ))}
+          <Button onClick={handleSubmit}>Confirm and Submit</Button>
         </CardContent>
       </Card>
     );
   }
 
+  const currentQuestion = questions[currentQuestionIndex];
+  const minutes = Math.floor(timeRemaining / 60);
+  const seconds = timeRemaining % 60;
 
-return (
+  return (
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
         <CardTitle>Question {currentQuestionIndex + 1} of {questions.length}</CardTitle>
-        <Progress value={progress} className="w-full mt-2" />
-        <div>Time remaining: {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}</div>
+        <div>Time Remaining: {minutes}:{seconds < 10 ? '0' : ''}{seconds}</div>
       </CardHeader>
       <CardContent>
         <p className="mb-4">{currentQuestion.question_text}</p>
-        <RadioGroup 
-          onValueChange={(value) => handleAnswer(currentQuestion.id, value)}
-          value={answers[currentQuestion.id] || ''}
-        >
-          {currentQuestion.answers.map((answer, index) => (
-            <div className="flex items-center space-x-2" key={index}>
-              <RadioGroupItem value={answer} id={`answer-${index}`} />
-              <Label htmlFor={`answer-${index}`}>{answer}</Label>
-            </div>
-          ))}
-        </RadioGroup>
+        {flaggedQuestions.includes(currentQuestion.id) && (
+          <p className="text-yellow-500 mb-2">This question is flagged for review.</p>
+        )}
+        {currentQuestion.answers && currentQuestion.answers.length > 0 ? (
+          <RadioGroup 
+            onValueChange={(value) => handleAnswer(currentQuestion.id, value)}
+            value={answers[currentQuestion.id] || ''}
+          >
+            {currentQuestion.answers.map((answer, index) => (
+              <div className="flex items-center space-x-2" key={index}>
+                <RadioGroupItem value={answer} id={`answer-${index}`} />
+                <Label htmlFor={`answer-${index}`}>{answer}</Label>
+              </div>
+            ))}
+          </RadioGroup>
+        ) : (
+          <p>No answer options available for this question.</p>
+        )}
         <div className="flex justify-between mt-4">
           <Button onClick={handlePrevious} disabled={currentQuestionIndex === 0}>Previous</Button>
+          <Button onClick={handleSkip}>Skip</Button>
           <Button onClick={handleFlag}>
             {flaggedQuestions.includes(currentQuestion.id) ? 'Unflag' : 'Flag for Review'}
           </Button>
-          <Button onClick={handleSkip}>Skip</Button>
           <Button onClick={handleNext}>
-            {currentQuestionIndex === questions.length - 1 && skippedQuestions.length === 0 ? 'Finish' : 'Next'}
+            {currentQuestionIndex === questions.length - 1 ? 'Review' : 'Next'}
           </Button>
         </div>
       </CardContent>
