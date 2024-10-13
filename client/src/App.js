@@ -14,6 +14,7 @@ function App() {
   const [currentTestId, setCurrentTestId] = useState(null);
   const [reviewTestId, setReviewTestId] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isUserView, setIsUserView] = useState(false);
 
   useEffect(() => {
     console.log('Current page:', currentPage);
@@ -74,6 +75,11 @@ ${passed ? 'Congratulations! You passed.' : 'Sorry, you did not pass. The minimu
     localStorage.removeItem('user');
   };
 
+const handleSwitchToUserView = () => {
+  setIsUserView(true);
+  setCurrentPage('availableTests');
+};
+
   return (
     <div className="App min-h-screen bg-gray-100 flex flex-col">
       {user && (
@@ -132,7 +138,10 @@ ${passed ? 'Congratulations! You passed.' : 'Sorry, you did not pass. The minimu
           />
         )}
         {currentPage === 'adminPanel' && isAdmin && (
-          <AdminPanel />
+          <AdminPanel
+            onSwitchtoUserView={handleSwitchToUserView}
+            isUserView={isUserView}
+          />
         )}
       </div>
     </div>
