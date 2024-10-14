@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import { Input } from "../ui/input";
+import { Button } from "../ui/button";
+import { ArrowUpDown } from "lucide-react";
 import { format } from 'date-fns';
 
 const StudentProgress = () => {
@@ -8,6 +10,7 @@ const StudentProgress = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -29,15 +32,44 @@ const StudentProgress = () => {
     fetchStudents();
   }, []);
 
-const filteredStudents = students.filter(student => {
-  const searchTermLower = searchTerm.toLowerCase();
-  return (
-    (student.first_name && student.first_name.toLowerCase().includes(searchTermLower)) ||
-    (student.last_name && student.last_name.toLowerCase().includes(searchTermLower)) ||
-    (student.student_id && student.student_id.toLowerCase().includes(searchTermLower)) ||
-    (student.shop_class && student.shop_class.toLowerCase().includes(searchTermLower))
-  );
-});
+  const filteredStudents = students.filter(student => {
+    const searchTermLower = searchTerm.toLowerCase();
+    return (
+      (student.first_name && student.first_name.toLowerCase().includes(searchTermLower)) ||
+      (student.last_name && student.last_name.toLowerCase().includes(searchTermLower)) ||
+      (student.student_id && student.student_id.toLowerCase().includes(searchTermLower)) ||
+      (student.shop_class && student.shop_class.toLowerCase().includes(searchTermLower)) ||
+      (student.test_results && student.test_results.some(result => 
+        result.test_name && result.test_name.toLowerCase().includes(searchTermLower)
+      ))
+    );
+  });
+
+  const sortedStudents = React.useMemo(() => {
+    let sortableItems = filteredStudents.flatMap(student => 
+      student.test_results.map(result => ({...student, ...result}))
+    );
+    if (sortConfig.key !== null) {
+      sortableItems.sort((a, b) => {
+        if (a[sortConfig.key] < b[sortConfig.key]) {
+          return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (a[sortConfig.key] > b[sortConfig.key]) {
+          return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [filteredStudents, sortConfig]);
+
+  const requestSort = (key) => {
+    let direction = 'ascending';
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
 
   if (loading) return <p>Loading student progress...</p>;
   if (error) return <p>Error: {error}</p>;
@@ -46,7 +78,7 @@ const filteredStudents = students.filter(student => {
     <div>
       <Input
         type="text"
-        placeholder="Search students..."
+        placeholder="Search students or tests..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         className="mb-4"
@@ -54,31 +86,38 @@ const filteredStudents = students.filter(student => {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>First Name</TableHead>
-            <TableHead>Last Name</TableHead>
-            <TableHead>Student ID</TableHead>
-            <TableHead>Shop Class</TableHead>
-            <TableHead>Test Name</TableHead>
-            <TableHead>Test Score</TableHead>
-            <TableHead>Last Attempt</TableHead>
-            <TableHead>Last Login</TableHead>
+            {[
+              { key: 'first_name', label: 'First Name' },
+              { key: 'last_name', label: 'Last Name' },
+              { key: 'student_id', label: 'Student ID' },
+              { key: 'shop_class', label: 'Shop Class' },
+              { key: 'test_name', label: 'Test Name' },
+              { key: 'score', label: 'Test Score' },
+              { key: 'attempt_date', label: 'Last Attempt' },
+              { key: 'last_login', label: 'Last Login' },
+            ].map(({ key, label }) => (
+              <TableHead key={key}>
+                <Button variant="ghost" onClick={() => requestSort(key)}>
+                  {label}
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+              </TableHead>
+            ))}
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredStudents.flatMap((student) => 
-            (student.test_results || []).map((result, index) => (
-              <TableRow key={`${student.id}-${index}`}>
-                <TableCell>{student.first_name || 'N/A'}</TableCell>
-                <TableCell>{student.last_name || 'N/A'}</TableCell>
-                <TableCell>{student.student_id || 'N/A'}</TableCell>
-                <TableCell>{student.shop_class || 'N/A'}</TableCell>
-                <TableCell>{result.test_name || 'N/A'}</TableCell>
-                <TableCell>{result.score || 0}%</TableCell>
-                <TableCell>{result.attempt_date ? format(new Date(result.attempt_date), 'yyyy-MM-dd HH:mm') : 'N/A'}</TableCell>
-                <TableCell>{student.last_login ? format(new Date(student.last_login), 'yyyy-MM-dd HH:mm') : 'N/A'}</TableCell>
-              </TableRow>
-            ))
-          )}
+          {sortedStudents.map((item, index) => (
+            <TableRow key={`${item.id}-${index}`}>
+              <TableCell>{item.first_name || 'N/A'}</TableCell>
+              <TableCell>{item.last_name || 'N/A'}</TableCell>
+              <TableCell>{item.student_id || 'N/A'}</TableCell>
+              <TableCell>{item.shop_class || 'N/A'}</TableCell>
+              <TableCell>{item.test_name || 'N/A'}</TableCell>
+              <TableCell>{item.score ? `${item.score}%` : 'N/A'}</TableCell>
+              <TableCell>{item.attempt_date ? format(new Date(item.attempt_date), 'yyyy-MM-dd HH:mm') : 'N/A'}</TableCell>
+              <TableCell>{item.last_login ? format(new Date(item.last_login), 'yyyy-MM-dd HH:mm') : 'N/A'}</TableCell>
+            </TableRow>
+          ))}
         </TableBody>
       </Table>
     </div>
