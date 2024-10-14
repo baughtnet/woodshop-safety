@@ -4,14 +4,29 @@ const pool = require('../db');
 
 // Registration route
 router.post('/register', async (req, res) => {
+  console.log('Registration route hit');
+  console.log('Request body: ', req.body);
   try {
-    const { firstName, lastName, studentId, pin } = req.body;
+    const { firstName, lastName, studentId, pin, shopClass } = req.body;
+    console.log('Destructured data: ', { firstName, lastName, studentId, pin, shopClass });
+    const query = 'INSERT INTO users (first_name, last_name, student_id, pin_hash, shop_class) VALUES ($1, $2, $3, $4, $5) RETURNING *';
+    const values = [firstName, lastName, studentId, pin, shopClass];
     
-    const result = await pool.query(
-      'INSERT INTO users (first_name, last_name, student_id, pin_hash, is_admin) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-      [firstName, lastName, studentId, pin, false] // Store PIN directly, set is_admin to false by default
-    );
-    res.json({ success: true, userId: result.rows[0].id });
+    console.log('Executing SQL query:', query);
+    console.log('Query values:', values);
+    const result = await pool.query(query, values);
+    console.log('Query Result: ', result.rows[0]);
+    
+    res.json({ 
+      success: true, 
+      userId: result.rows[0].id, 
+      insertedData: {
+        firstName: result.rows[0].first_name,
+        lastName: result.rows[0].last_name,
+        studentId: result.rows[0].student_id,
+        shopClass: result.rows[0].shop_class
+      }
+    });
   } catch (err) {
     console.error('Registration error:', err);
     if (err.code === '23505') { // unique_violation error code
@@ -44,7 +59,8 @@ router.post('/login', async (req, res) => {
         firstName: user.first_name, 
         lastName: user.last_name, 
         studentId: user.student_id,
-        isAdmin: user.is_admin 
+        isAdmin: user.is_admin,
+        shopClass: user.shop_class
       } 
     });
   } catch (err) {
