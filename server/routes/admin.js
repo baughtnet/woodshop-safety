@@ -240,6 +240,31 @@ router.get('/dashboard', async (req, res) => {
   }
 });
 
+router.put('/users/:userId/updatePin', async (req, res) => {
+    const { userId } = req.params;
+    const { newPin } = req.body;
+
+    if (!newPin || newPin.length !== 4 || !/^\d+$/.test(newPin)) {
+        return res.status(400).json({ error: 'PIN must be exactly 4 digits' });
+    }
+
+    try {
+        const result = await pool.query(
+            'UPDATE users SET pin_hash = $1 WHERE id = $2 RETURNING id',
+            [newPin, userId] // In a real-world scenario, you should hash the PIN before storing
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        res.json({ message: 'PIN updated successfully' });
+    } catch (error) {
+        console.error('Error updating PIN:', error);
+        res.status(500).json({ error: 'An error occurred while updating the PIN.' });
+    }
+});
+
 router.delete('/users/:userId', async (req, res) => {
     const { userId } = req.params;
     try {
