@@ -6,7 +6,7 @@ const pool = require('../db');
 router.get('/users', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT u.id, u.first_name, u.last_name, u.student_id, 
+      SELECT u.id, u.first_name, u.last_name, u.student_id, u.shop_class, 
              json_agg(json_build_object('test_id', utr.test_id, 'score', utr.score, 'percentage', utr.percentage)) as test_results
       FROM users u
       LEFT JOIN user_test_results utr ON u.id = utr.user_id

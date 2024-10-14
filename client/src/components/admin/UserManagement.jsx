@@ -5,6 +5,7 @@ import { Input } from '../ui/input';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Label } from '../ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Checkbox } from '../ui/checkbox';
 
 const EditPinDialog = ({ isOpen, onClose, user, onUpdatePin }) => {
@@ -64,6 +65,13 @@ const EditUserDialog = ({ isOpen, onClose, user, onUpdateUser }) => {
     setEditedUser(prev => ({ ...prev, [name]: value }));
   };
 
+
+  const shopClasses = [
+    "A Block - Wood 11/12",
+    "B Block - Wood 11/12",
+    "D Block - Wood 9/10"
+  ];
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
@@ -100,12 +108,21 @@ const EditUserDialog = ({ isOpen, onClose, user, onUpdateUser }) => {
           </div>
           <div>
             <Label htmlFor="shop_class">Shop Class</Label>
-            <Input
-              id="shop_class"
-              name="shop_class"
+            <Select
               value={editedUser.shop_class || ''}
-              onChange={handleInputChange}
-            />
+              onValueChange={(value) => setEditedUser(prev => ({ ...prev, shop_class: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a shop class" />
+              </SelectTrigger>
+              <SelectContent>
+                {shopClasses.map((shopClass) => (
+                  <SelectItem key={shopClass} value={shopClass}>
+                    {shopClass}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Checkbox
@@ -216,11 +233,12 @@ const UserManagement = () => {
     }
   };
 
-  const filteredUsers = users.filter(user => 
-    user.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.student_id.includes(searchTerm)
-  );
+const filteredUsers = users.filter(user => 
+  user.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  user.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  user.student_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  (user.shop_class && user.shop_class.toLowerCase().includes(searchTerm.toLowerCase()))
+);
 
   if (loading) return <p>Loading users...</p>;
 

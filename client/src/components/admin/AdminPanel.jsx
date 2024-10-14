@@ -3,10 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Switch } from "../ui/switch";
 import UserManagement from './UserManagement';
-import TestManagement from './TestManagement';
-import QuestionManagement from './QuestionManagement';
 import StudentProgress from './StudentProgress';
 import Dashboard from './Dashboard';
+import TestManager from './TestManager';
 
 const AdminPanel = ({ onSwitchtoUserView }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -35,8 +34,7 @@ const AdminPanel = ({ onSwitchtoUserView }) => {
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="progress">Student Progress</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
-            <TabsTrigger value="tests">Tests</TabsTrigger>
-            <TabsTrigger value="questions">Questions</TabsTrigger>
+            <TabsTrigger value="manager">Test Manager</TabsTrigger>
           </TabsList>
           <TabsContent value="dashboard">
             <Dashboard />
@@ -47,11 +45,8 @@ const AdminPanel = ({ onSwitchtoUserView }) => {
           <TabsContent value="users">
             <UserManagement />
           </TabsContent>
-          <TabsContent value="tests">
-            <TestManagement />
-          </TabsContent>
-          <TabsContent value="questions">
-            <QuestionManagement />
+          <TabsContent value="manager">
+            <TestManager />
           </TabsContent>
         </Tabs>
       </CardContent>
