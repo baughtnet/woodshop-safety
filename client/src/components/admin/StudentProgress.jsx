@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import { Input } from "../ui/input";
+import { format } from 'date-fns';
 
 const StudentProgress = () => {
   const [students, setStudents] = useState([]);
@@ -25,15 +26,18 @@ const StudentProgress = () => {
         setLoading(false);
       }
     };
-
     fetchStudents();
   }, []);
 
-  const filteredStudents = students.filter(student => 
-    student.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.student_id.includes(searchTerm)
+const filteredStudents = students.filter(student => {
+  const searchTermLower = searchTerm.toLowerCase();
+  return (
+    (student.first_name && student.first_name.toLowerCase().includes(searchTermLower)) ||
+    (student.last_name && student.last_name.toLowerCase().includes(searchTermLower)) ||
+    (student.student_id && student.student_id.toLowerCase().includes(searchTermLower)) ||
+    (student.shop_class && student.shop_class.toLowerCase().includes(searchTermLower))
   );
+});
 
   if (loading) return <p>Loading student progress...</p>;
   if (error) return <p>Error: {error}</p>;
@@ -50,25 +54,31 @@ const StudentProgress = () => {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Name</TableHead>
+            <TableHead>First Name</TableHead>
+            <TableHead>Last Name</TableHead>
             <TableHead>Student ID</TableHead>
-            <TableHead>Test Results</TableHead>
+            <TableHead>Shop Class</TableHead>
+            <TableHead>Test Name</TableHead>
+            <TableHead>Test Score</TableHead>
+            <TableHead>Last Attempt</TableHead>
+            <TableHead>Last Login</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredStudents.map((student) => (
-            <TableRow key={student.id}>
-              <TableCell>{student.first_name} {student.last_name}</TableCell>
-              <TableCell>{student.student_id}</TableCell>
-              <TableCell>
-                {student.test_results.map((result, index) => (
-                  <div key={index}>
-                    Test Name: {result.test_id}, Score: {result.percentage}%
-                  </div>
-                ))}
-              </TableCell>
-            </TableRow>
-          ))}
+          {filteredStudents.flatMap((student) => 
+            (student.test_results || []).map((result, index) => (
+              <TableRow key={`${student.id}-${index}`}>
+                <TableCell>{student.first_name || 'N/A'}</TableCell>
+                <TableCell>{student.last_name || 'N/A'}</TableCell>
+                <TableCell>{student.student_id || 'N/A'}</TableCell>
+                <TableCell>{student.shop_class || 'N/A'}</TableCell>
+                <TableCell>{result.test_name || 'N/A'}</TableCell>
+                <TableCell>{result.score || 0}%</TableCell>
+                <TableCell>{result.attempt_date ? format(new Date(result.attempt_date), 'yyyy-MM-dd HH:mm') : 'N/A'}</TableCell>
+                <TableCell>{student.last_login ? format(new Date(student.last_login), 'yyyy-MM-dd HH:mm') : 'N/A'}</TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
     </div>

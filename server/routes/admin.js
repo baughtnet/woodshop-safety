@@ -100,21 +100,53 @@ router.get('/tests/:testId/questions', async (req, res) => {
 router.get('/students-progress', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT u.id, u.first_name, u.last_name, u.student_id,
-             json_agg(json_build_object(
-               'test_name', t.name,
-               'percentage', utr.percentage
-             )) as test_results
-      FROM users u
-      LEFT JOIN user_test_results utr ON u.id = utr.user_id
-      LEFT JOIN tests t ON utr.test_id = t.id
-      GROUP BY u.id, u.first_name, u.last_name, u.student_id
-      ORDER BY u.last_name, u.first_name
+      SELECT 
+        u.id, 
+        u.first_name, 
+        u.last_name, 
+        u.student_id, 
+        u.shop_class,
+        u.last_login,
+        t.name AS test_name, 
+        utr.score, 
+        utr.attempt_timestamp
+      FROM 
+        users u
+      LEFT JOIN 
+        user_test_results utr ON u.id = utr.user_id
+      LEFT JOIN 
+        tests t ON utr.test_id = t.id
+      ORDER BY 
+        u.last_name, u.first_name, utr.attempt_timestamp DESC
     `);
-    res.json(result.rows);
+
+    // Process the result to group by student
+    const studentsProgress = result.rows.reduce((acc, row) => {
+      if (!acc[row.id]) {
+        acc[row.id] = {
+          id: row.id,
+          first_name: row.first_name,
+          last_name: row.last_name,
+          student_id: row.student_id,
+          shop_class: row.shop_class,
+          last_login: row.last_login,
+          test_results: []
+        };
+      }
+      if (row.test_name) {
+        acc[row.id].test_results.push({
+          test_name: row.test_name,
+          score: row.score,
+          attempt_date: row.attempt_timestamp
+        });
+      }
+      return acc;
+    }, {});
+
+    res.json(Object.values(studentsProgress));
   } catch (error) {
     console.error('Error fetching students progress:', error);
-    res.status(500).json({ error: 'Failed to fetch students progress' });
+    res.status(500).json({ error: 'An error occurred while fetching students progress.' });
   }
 });
 
