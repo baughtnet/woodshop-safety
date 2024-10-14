@@ -1,12 +1,12 @@
 import React from 'react';
 import { Button } from "./button";
 
-export const Dialog = ({ isOpen, onClose, children }) => {
-  if (!isOpen) return null;
+export const Dialog = ({ open, onOpenChange, children }) => {
+  if (!open) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => onOpenChange(false)}>
+      <div className="bg-white rounded-lg p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
         {children}
       </div>
     </div>
@@ -29,9 +29,9 @@ export const DialogFooter = ({ children }) => {
   return <div className="mt-4 flex justify-end space-x-2">{children}</div>;
 };
 
-const DialogComponent = ({ isOpen, onClose, title, children, onSubmit }) => {
+const DialogComponent = ({ open, onOpenChange, title, children, onSubmit }) => {
   return (
-    <Dialog isOpen={isOpen} onClose={onClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogHeader>
         <DialogTitle>{title}</DialogTitle>
       </DialogHeader>
@@ -39,7 +39,7 @@ const DialogComponent = ({ isOpen, onClose, title, children, onSubmit }) => {
         {children}
       </DialogContent>
       <DialogFooter>
-        <Button onClick={onClose} variant="outline">Cancel</Button>
+        <Button onClick={() => onOpenChange(false)} variant="outline">Cancel</Button>
         <Button onClick={onSubmit}>Submit</Button>
       </DialogFooter>
     </Dialog>

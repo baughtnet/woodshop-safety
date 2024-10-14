@@ -28,7 +28,7 @@ const QuestionManagement = () => {
     if (selectedTest) {
       fetchQuestions(selectedTest);
     }
-  }, [selectedTest]);
+  }, [selectedTest, fetchQuestions]);
 
   const fetchTests = async () => {
     try {

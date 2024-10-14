@@ -2,12 +2,11 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Switch } from "../ui/switch";
-import { Button } from "../ui/button";
 import UserManagement from './UserManagement';
 import TestManagement from './TestManagement';
 import QuestionManagement from './QuestionManagement';
 import StudentProgress from './StudentProgress';
-import Dashboard from './Dashboard'; // New import
+import Dashboard from './Dashboard';
 
 const AdminPanel = ({ onSwitchtoUserView }) => {
   const [activeTab, setActiveTab] = useState('dashboard');

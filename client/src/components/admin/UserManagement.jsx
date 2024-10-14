@@ -5,6 +5,7 @@ import { Input } from '../ui/input';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Label } from '../ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
+import { Checkbox } from '../ui/checkbox';
 
 const EditPinDialog = ({ isOpen, onClose, user, onUpdatePin }) => {
   const [newPin, setNewPin] = useState('');
@@ -46,12 +47,91 @@ const EditPinDialog = ({ isOpen, onClose, user, onUpdatePin }) => {
   );
 };
 
+const EditUserDialog = ({ isOpen, onClose, user, onUpdateUser }) => {
+  const [editedUser, setEditedUser] = useState(user || {});
+
+  useEffect(() => {
+    setEditedUser(user || {});
+  }, [user]);
+
+  const handleSubmit = () => {
+    onUpdateUser(editedUser);
+    onClose();
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditedUser(prev => ({ ...prev, [name]: value }));
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit User: {editedUser.first_name} {editedUser.last_name}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="first_name">First Name</Label>
+            <Input
+              id="first_name"
+              name="first_name"
+              value={editedUser.first_name || ''}
+              onChange={handleInputChange}
+            />
+          </div>
+          <div>
+            <Label htmlFor="last_name">Last Name</Label>
+            <Input
+              id="last_name"
+              name="last_name"
+              value={editedUser.last_name || ''}
+              onChange={handleInputChange}
+            />
+          </div>
+          <div>
+            <Label htmlFor="student_id">Student ID</Label>
+            <Input
+              id="student_id"
+              name="student_id"
+              value={editedUser.student_id || ''}
+              onChange={handleInputChange}
+            />
+          </div>
+          <div>
+            <Label htmlFor="shop_class">Shop Class</Label>
+            <Input
+              id="shop_class"
+              name="shop_class"
+              value={editedUser.shop_class || ''}
+              onChange={handleInputChange}
+            />
+          </div>
+          <div>
+            <Checkbox
+              id="is_admin"
+              name="is_admin"
+              checked={editedUser.is_admin || false}
+              onCheckedChange={(checked) => setEditedUser(prev => ({ ...prev, is_admin: checked }))}
+              label="Is Admin"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button onClick={handleSubmit}>Update User</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(null);
+  const [editingPinUser, setEditingPinUser] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
 
   useEffect(() => {
@@ -94,13 +174,9 @@ const UserManagement = () => {
     }
   };
 
-  const handleEditUser = (user) => {
-    setEditingUser(user);
-  };
-
   const handleUpdatePin = async (newPin) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/admin/users/${editingUser.id}/updatePin`, {
+      const response = await fetch(`http://localhost:3001/api/admin/users/${editingPinUser.id}/updatePin`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ newPin })
@@ -111,11 +187,32 @@ const UserManagement = () => {
       }
 
       setError('PIN updated successfully');
-      setEditingUser(null);
+      setEditingPinUser(null);
       await fetchUsers(); // Refresh the user list
     } catch (error) {
       console.error('Error updating PIN:', error);
       setError('Failed to update PIN. Please try again.');
+    }
+  };
+
+  const handleUpdateUser = async (updatedUser) => {
+    try {
+      const response = await fetch(`http://localhost:3001/api/admin/users/${updatedUser.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedUser)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update user');
+      }
+
+      setError('User updated successfully');
+      setEditingUser(null);
+      await fetchUsers(); // Refresh the user list
+    } catch (error) {
+      console.error('Error updating user:', error);
+      setError('Failed to update user. Please try again.');
     }
   };
 
@@ -127,7 +224,7 @@ const UserManagement = () => {
 
   if (loading) return <p>Loading users...</p>;
 
-  return (
+return (
     <div>
       {error && <Alert variant={error.includes('successfully') ? 'default' : 'destructive'}>
         <AlertDescription>{error}</AlertDescription>
@@ -158,11 +255,18 @@ const UserManagement = () => {
               <TableCell>{user.is_admin ? 'Yes' : 'No'}</TableCell>
               <TableCell>
                 <Button 
-                  onClick={() => handleEditUser(user)} 
+                  onClick={() => setEditingPinUser(user)} 
                   variant="outline"
                   className="mr-2"
                 >
                   Edit PIN
+                </Button>
+                <Button 
+                  onClick={() => setEditingUser(user)} 
+                  variant="outline"
+                  className="mr-2"
+                >
+                  Edit User
                 </Button>
                 <Button 
                   onClick={() => handleDeleteUser(user.id)} 
@@ -177,12 +281,23 @@ const UserManagement = () => {
         </TableBody>
       </Table>
 
-      <EditPinDialog
-        isOpen={editingUser !== null}
-        onClose={() => setEditingUser(null)}
-        user={editingUser}
-        onUpdatePin={handleUpdatePin}
-      />
+      {editingPinUser && (
+        <EditPinDialog
+          isOpen={true}
+          onClose={() => setEditingPinUser(null)}
+          user={editingPinUser}
+          onUpdatePin={handleUpdatePin}
+        />
+      )}
+
+      {editingUser && (
+        <EditUserDialog
+          isOpen={true}
+          onClose={() => setEditingUser(null)}
+          user={editingUser}
+          onUpdateUser={handleUpdateUser}
+        />
+      )}
     </div>
   );
 };

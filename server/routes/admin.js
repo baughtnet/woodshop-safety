@@ -265,6 +265,27 @@ router.put('/users/:userId/updatePin', async (req, res) => {
     }
 });
 
+router.put('/users/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const { first_name, last_name, student_id, shop_class, is_admin } = req.body;
+
+  try {
+    const result = await pool.query(
+      'UPDATE users SET first_name = $1, last_name = $2, student_id = $3, shop_class = $4, is_admin = $5 WHERE id = $6 RETURNING *',
+      [first_name, last_name, student_id, shop_class, is_admin, userId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({ message: 'User updated successfully', user: result.rows[0] });
+  } catch (error) {
+    console.error('Error updating user:', error);
+    res.status(500).json({ error: 'An error occurred while updating the user.' });
+  }
+});
+
 router.delete('/users/:userId', async (req, res) => {
     const { userId } = req.params;
     try {
