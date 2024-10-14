@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -20,17 +20,7 @@ const QuestionManagement = () => {
   const [editingQuestion, setEditingQuestion] = useState(null);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    fetchTests();
-  }, []);
-
-  useEffect(() => {
-    if (selectedTest) {
-      fetchQuestions(selectedTest);
-    }
-  }, [selectedTest, fetchQuestions]);
-
-  const fetchTests = async () => {
+  const fetchTests = useCallback(async () => {
     try {
       const response = await fetch('http://localhost:3001/api/admin/tests');
       if (response.ok) {
@@ -42,32 +32,33 @@ const QuestionManagement = () => {
     } catch (error) {
       setError('Error fetching tests: ' + error.message);
     }
-  };
+  }, []);
 
-const fetchQuestions = async (testId) => {
-  try {
-    const response = await fetch(`http://localhost:3001/api/admin/tests/${testId}/questions`);
-    if (response.ok) {
-      const data = await response.json();
-      console.log('Fetched questions:', data); // Log fetched data
-      setQuestions(data);
-      console.log('Questions state after setting:', questions); // This might show the previous state due to closure
-    } else {
-      setError('Failed to fetch questions');
+  const fetchQuestions = useCallback(async (testId) => {
+    try {
+      const response = await fetch(`http://localhost:3001/api/admin/tests/${testId}/questions`);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Fetched questions:', data);
+        setQuestions(data);
+      } else {
+        setError('Failed to fetch questions');
+      }
+    } catch (error) {
+      console.error('Error fetching questions:', error);
+      setError('Error fetching questions: ' + error.message);
     }
-  } catch (error) {
-    console.error('Error fetching questions:', error);
-    setError('Error fetching questions: ' + error.message);
-  }
-};
+  }, []);
 
-// Add this useEffect to log questions whenever they change
-useEffect(() => {
-  console.log('Questions state updated:', questions);
-}, [questions]);
+  useEffect(() => {
+    fetchTests();
+  }, [fetchTests]);
 
-// In your render method, before the return statement:
-console.log('Current questions state during render:', questions);
+  useEffect(() => {
+    if (selectedTest) {
+      fetchQuestions(selectedTest);
+    }
+  }, [selectedTest, fetchQuestions]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -235,9 +226,9 @@ console.log('Current questions state during render:', questions);
             </Table>
           </CardContent>
         </Card>
-)}
+      )}
     </div>
   );
-}
+};
 
 export default QuestionManagement;
