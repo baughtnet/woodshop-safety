@@ -242,12 +242,15 @@ const EditUserDialog = ({ isOpen, onClose, user, onUpdateUser, cohorts }) => {
     }
   };
 
-  const filteredUsers = users.filter(user => 
-    user.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.student_id.includes(searchTerm)
-    (user.shop_class && user.shop_class.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+const filteredUsers = users.filter(user => {
+    const searchTermLower = searchTerm.toLowerCase();
+    return (
+      (user.first_name && user.first_name.toLowerCase().includes(searchTermLower)) ||
+      (user.last_name && user.last_name.toLowerCase().includes(searchTermLower)) ||
+      (user.student_id && String(user.student_id).toLowerCase().includes(searchTermLower)) ||
+      (user.shop_class && user.shop_class.toLowerCase().includes(searchTermLower))
+    );
+  });
 
   if (loading) return <p>Loading users...</p>;
 
