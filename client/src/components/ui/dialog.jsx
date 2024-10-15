@@ -3,7 +3,6 @@ import { Button } from "./button";
 
 export const Dialog = ({ open, onOpenChange, children }) => {
   if (!open) return null;
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => onOpenChange(false)}>
       <div className="bg-white rounded-lg p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
@@ -27,6 +26,11 @@ export const DialogTitle = ({ children }) => {
 
 export const DialogFooter = ({ children }) => {
   return <div className="mt-4 flex justify-end space-x-2">{children}</div>;
+};
+
+// Add DialogTrigger component
+export const DialogTrigger = ({ children, ...props }) => {
+  return React.cloneElement(children, props);
 };
 
 const DialogComponent = ({ open, onOpenChange, title, children, onSubmit }) => {

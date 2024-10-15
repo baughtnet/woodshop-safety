@@ -9,23 +9,14 @@ router.post('/register', async (req, res) => {
   try {
     const { firstName, lastName, studentId, pin, shopClass } = req.body;
     console.log('Destructured data: ', { firstName, lastName, studentId, pin, shopClass });
-    const query = 'INSERT INTO users (first_name, last_name, student_id, pin_hash, shop_class) VALUES ($1, $2, $3, $4, $5) RETURNING *';
-    const values = [firstName, lastName, studentId, pin, shopClass];
-    
-    console.log('Executing SQL query:', query);
-    console.log('Query values:', values);
-    const result = await pool.query(query, values);
-    console.log('Query Result: ', result.rows[0]);
+    const result = await pool.query('INSERT INTO users (first_name, last_name, student_id, pin_hash, shop_class) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+    [firstName, lastName, studentId, pin, shopClass]
+    );
     
     res.json({ 
       success: true, 
       userId: result.rows[0].id, 
-      insertedData: {
-        firstName: result.rows[0].first_name,
-        lastName: result.rows[0].last_name,
-        studentId: result.rows[0].student_id,
-        shopClass: result.rows[0].shop_class
-      }
+      insertedData: { firstName, lastName, studentId, pin, shopClass }
     });
   } catch (err) {
     console.error('Registration error:', err);

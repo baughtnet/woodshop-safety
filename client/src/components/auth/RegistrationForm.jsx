@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -14,8 +14,26 @@ const RegistrationForm = ({ onBackToHome, onSuccessfulRegister }) => {
     pin: '',
     shopClass: ''
   });
+
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [cohorts, setCohorts] = useState([]);
+
+  useEffect(() => {
+    fetchCohorts();
+  }, []);
+
+  const fetchCohorts = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/cohorts');
+      if (!response.ok) throw new Error('Failed to fetch cohorts');
+      const data = await response.json();
+      setCohorts(data);
+    } catch (err) {
+      console.error('Error fetching cohorts:', err);
+      setError('Failed to load classes. Please try again later.');
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -25,45 +43,45 @@ const RegistrationForm = ({ onBackToHome, onSuccessfulRegister }) => {
     }));
   };
 
-  const handleShopClassChange = (value) => {
+  const handleCohortChange = (value) => {
     setFormData(prevState => ({
       ...prevState,
       shopClass: value
     }));
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setError('');
-  setSuccess(false);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess(false);
 
-  console.log('Form data being sent: ', formData);
-  
-  try {
-    const response = await fetch('http://localhost:3001/api/auth/register', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(formData),
-    });
-    console.log('Response status: ', response.status);
-    const data = await response.json();
-    console.log('Full registration response:', JSON.stringify(data, null, 2));
+    console.log('Form data being sent: ', formData);
+    
+    try {
+      const response = await fetch('http://localhost:3001/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+      console.log('Response status: ', response.status);
+      const data = await response.json();
+      console.log('Full registration response:', JSON.stringify(data, null, 2));
 
-    if (!response.ok) {
-      throw new Error(data.error || 'Registration failed');
+      if (!response.ok) {
+        throw new Error(data.error || 'Registration failed');
+      }
+
+      console.log('Registration successful:', JSON.stringify(data, null, 2));
+      setSuccess(true);
+      setTimeout(() => {
+        onSuccessfulRegister();
+      }, 2000); // Redirect after 2 seconds
+    } catch (err) {
+      setError(err.message);
     }
-
-    console.log('Registration successful:', JSON.stringify(data, null, 2));
-    setSuccess(true);
-    setTimeout(() => {
-      onSuccessfulRegister();
-    }, 2000); // Redirect after 2 seconds
-  } catch (err) {
-    setError(err.message);
-  }
-};
+  };
 
   return (
     <Card className="w-full max-w-md mx-auto">
@@ -118,15 +136,17 @@ const handleSubmit = async (e) => {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="class">Class</Label>
-            <Select onValueChange={handleShopClassChange} value={formData.shopClass} required>
+            <Label htmlFor="shopClass">Class</Label>
+            <Select onValueChange={handleCohortChange} value={formData.shopClass} required>
               <SelectTrigger>
                 <SelectValue placeholder="Select your class" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="A Block - Wood 11/12">A Block - Wood 11/12</SelectItem>
-                <SelectItem value="B Block - Wood 11/12">B Block - Wood 11/12</SelectItem>
-                <SelectItem value="D Block - Wood 9/10">D Block - Wood 9/10</SelectItem>
+                {cohorts.map((cohort) => (
+                  <SelectItem key={cohort.name} value={cohort.name.toString()}>
+                    {cohort.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

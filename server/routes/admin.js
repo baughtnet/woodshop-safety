@@ -18,6 +18,25 @@ router.get('/users', async (req, res) => {
     res.status(500).json({ error: 'Error fetching user data' });
   }
 });
+
+router.patch('/users/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const { cohortId } = req.body;
+  try {
+    const result = await pool.query(
+      'UPDATE users SET cohort_id = $1 WHERE id = $2 RETURNING *',
+      [cohortId, userId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating user:', error);
+    res.status(500).json({ error: 'An error occurred while updating the user.' });
+  }
+});
+
 // Get all tests
 router.get('/tests', async (req, res) => {
   try {

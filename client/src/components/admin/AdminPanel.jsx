@@ -6,6 +6,7 @@ import UserManagement from './UserManagement';
 import StudentProgress from './StudentProgress';
 import Dashboard from './Dashboard';
 import TestManager from './TestManager';
+import ClassManagement from './ClassManagement';
 
 const AdminPanel = ({ onSwitchtoUserView }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -33,6 +34,7 @@ const AdminPanel = ({ onSwitchtoUserView }) => {
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="progress">Student Progress</TabsTrigger>
+            <TabsTrigger value="cohorts">Class Management</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="manager">Test Manager</TabsTrigger>
           </TabsList>
@@ -41,6 +43,9 @@ const AdminPanel = ({ onSwitchtoUserView }) => {
           </TabsContent>
           <TabsContent value="progress">
             <StudentProgress />
+          </TabsContent>
+          <TabsContent value="cohorts">
+            <ClassManagement />
           </TabsContent>
           <TabsContent value="users">
             <UserManagement />
