@@ -4,12 +4,15 @@ import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Progress } from "../ui/progress";
 import { ArrowUpDown, Search, AlertCircle } from "lucide-react";
 import { format } from 'date-fns';
 
 const StudentProgress = () => {
   const [students, setStudents] = useState([]);
+  const [cohorts, setCohorts] = useState([]);
+  const [selectedCohort, setSelectedCohort] = useState('All Classes');
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -17,40 +20,39 @@ const StudentProgress = () => {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [totalTests, setTotalTests] = useState(0);
 
-useEffect(() => {
-    const fetchStudents = async () => {
+  useEffect(() => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await fetch('http://localhost:3001/api/admin/students-progress');
-        if (!response.ok) {
-          throw new Error('Failed to fetch students progress');
-        }
-        const data = await response.json();
-        setStudents(data);
+        const studentsResponse = await fetch('http://localhost:3001/api/admin/students-progress');
+        const cohortsResponse = await fetch('http://localhost:3001/api/cohorts');
         
-        // Determine the total number of tests
-        if (data.length > 0) {
-          const maxTestCount = Math.max(...data.map(student => student.test_results.length));
-          setTotalTests(maxTestCount);
+        if (!studentsResponse.ok || !cohortsResponse.ok) {
+          throw new Error('Failed to fetch data');
         }
+        
+        const studentsData = await studentsResponse.json();
+        const cohortsData = await cohortsResponse.json();
+        
+        setStudents(studentsData);
+        setCohorts([{ name: 'All Classes' }, ...cohortsData]);
       } catch (error) {
-        console.error('Error fetching students progress:', error);
+        console.error('Error fetching data:', error);
         setError(error.message);
       } finally {
         setLoading(false);
       }
     };
-    fetchStudents();
+    fetchData();
   }, []);
 
   const filteredStudents = students.filter(student => {
-    const searchTermLower = searchTerm.toLowerCase();
-    return (
-      (student.first_name && student.first_name.toLowerCase().includes(searchTermLower)) ||
-      (student.last_name && student.last_name.toLowerCase().includes(searchTermLower)) ||
-      (student.student_id && student.student_id.toLowerCase().includes(searchTermLower)) ||
-      (student.shop_class && student.shop_class.toLowerCase().includes(searchTermLower))
-    );
+    const inSelectedCohort = selectedCohort === 'All Classes' || student.shop_class === selectedCohort;
+    const matchesSearch = searchTerm === '' || 
+      student.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.student_id.toLowerCase().includes(searchTerm.toLowerCase());
+    return inSelectedCohort && matchesSearch;
   });
 
   const sortedStudents = React.useMemo(() => {
@@ -77,11 +79,19 @@ useEffect(() => {
     setSortConfig({ key, direction });
   };
 
-  const getAverageScore = (student) => {
+const getAverageScore = (studentOrList) => {
+  if (Array.isArray(studentOrList)) {
+    // If it's a list of students
+    const totalScore = studentOrList.reduce((sum, student) => sum + getAverageScore(student), 0);
+    return studentOrList.length > 0 ? totalScore / studentOrList.length : 0;
+  } else {
+    // If it's a single student
+    const student = studentOrList;
     if (!student.test_results || student.test_results.length === 0) return 0;
     const totalScore = student.test_results.reduce((sum, result) => sum + result.score, 0);
     return totalScore / student.test_results.length;
-  };
+  }
+};
 
   const getLastTestDate = (student) => {
     if (!student.test_results || student.test_results.length === 0) return 'N/A';
@@ -97,11 +107,15 @@ useEffect(() => {
     return (completedTests / totalTests) * 100;
   };
 
+const getStudentsAtRisk = (studentList) => {
+  return studentList.filter(student => getAverageScore(student) < 70).length;
+};
+
   if (loading) return <p>Loading student progress...</p>;
   if (error) return <p>Error: {error}</p>;
 
   return (
-    <div className="container mx-auto p-4 max-w-[1400px]"> {/* Increased max-width */}
+    <div className="w-full">
       <h1 className="text-2xl font-bold mb-4">Student Progress Dashboard</h1>
       <Tabs defaultValue="overview">
         <TabsList>
@@ -114,21 +128,35 @@ useEffect(() => {
               <CardTitle>Class Statistics</CardTitle>
             </CardHeader>
             <CardContent>
+              <div className="mb-4">
+                <Select value={selectedCohort} onValueChange={setSelectedCohort}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a class" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cohorts.map((cohort) => (
+                      <SelectItem key={cohort.name} value={cohort.name}>
+                        {cohort.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <h3 className="font-semibold">Total Students</h3>
-                  <p className="text-2xl">{students.length}</p>
+                  <p className="text-2xl">{filteredStudents.length}</p>
                 </div>
                 <div>
                   <h3 className="font-semibold">Average Class Score</h3>
                   <p className="text-2xl">
-                    {(students.reduce((sum, student) => sum + getAverageScore(student), 0) / students.length).toFixed(2)}%
+                    {getAverageScore(filteredStudents).toFixed(2)}%
                   </p>
                 </div>
                 <div>
                   <h3 className="font-semibold">Students at Risk</h3>
                   <p className="text-2xl text-red-500">
-                    {students.filter(student => getAverageScore(student) < 70).length}
+                    {getStudentsAtRisk(filteredStudents)}
                   </p>
                 </div>
               </div>
