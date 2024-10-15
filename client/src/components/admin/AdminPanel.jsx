@@ -20,7 +20,7 @@ const AdminPanel = ({ onSwitchtoUserView }) => {
   };
 
   return (
-    <Card className="w-full max-w-6xl mx-auto">
+    <Card className="w-full max-w-[1400px] mx-auto"> {/* Increased max-width */}
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Admin Panel</CardTitle>
         <div className="flex items-center space-x-2">

@@ -15,8 +15,9 @@ const StudentProgress = () => {
   const [error, setError] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: 'last_name', direction: 'ascending' });
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [totalTests, setTotalTests] = useState(0);
 
-  useEffect(() => {
+useEffect(() => {
     const fetchStudents = async () => {
       try {
         setLoading(true);
@@ -26,6 +27,12 @@ const StudentProgress = () => {
         }
         const data = await response.json();
         setStudents(data);
+        
+        // Determine the total number of tests
+        if (data.length > 0) {
+          const maxTestCount = Math.max(...data.map(student => student.test_results.length));
+          setTotalTests(maxTestCount);
+        }
       } catch (error) {
         console.error('Error fetching students progress:', error);
         setError(error.message);
@@ -84,11 +91,17 @@ const StudentProgress = () => {
     return format(new Date(lastTest.attempt_date), 'yyyy-MM-dd');
   };
 
+  const getProgress = (student) => {
+    if (!student.test_results) return 0;
+    const completedTests = student.test_results.length;
+    return (completedTests / totalTests) * 100;
+  };
+
   if (loading) return <p>Loading student progress...</p>;
   if (error) return <p>Error: {error}</p>;
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="container mx-auto p-4 max-w-[1400px]"> {/* Increased max-width */}
       <h1 className="text-2xl font-bold mb-4">Student Progress Dashboard</h1>
       <Tabs defaultValue="overview">
         <TabsList>
@@ -133,50 +146,59 @@ const StudentProgress = () => {
               Clear Search
             </Button>
           </div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {[
-                  { key: 'last_name', label: 'Last Name' },
-                  { key: 'first_name', label: 'First Name' },
-                  { key: 'student_id', label: 'Student ID' },
-                  { key: 'shop_class', label: 'Shop Class' },
-                  { key: 'average_score', label: 'Average Score' },
-                  { key: 'last_test', label: 'Last Test Date' },
-                ].map(({ key, label }) => (
-                  <TableHead key={key}>
-                    <Button variant="ghost" onClick={() => requestSort(key)}>
-                      {label}
-                      <ArrowUpDown className="ml-2 h-4 w-4" />
-                    </Button>
-                  </TableHead>
-                ))}
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedStudents.map((student) => (
-                <TableRow key={student.id}>
-                  <TableCell>{student.last_name}</TableCell>
-                  <TableCell>{student.first_name}</TableCell>
-                  <TableCell>{student.student_id}</TableCell>
-                  <TableCell>{student.shop_class}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center">
-                      <Progress value={getAverageScore(student)} className="mr-2" />
-                      {getAverageScore(student).toFixed(2)}%
-                    </div>
-                  </TableCell>
-                  <TableCell>{getLastTestDate(student)}</TableCell>
-                  <TableCell>
-                    <Button variant="ghost" onClick={() => setSelectedStudent(student)}>
-                      View Details
-                    </Button>
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {[
+                    { key: 'last_name', label: 'Last Name' },
+                    { key: 'first_name', label: 'First Name' },
+                    { key: 'student_id', label: 'Student ID' },
+                    { key: 'shop_class', label: 'Shop Class' },
+                    { key: 'average_score', label: 'Average Score' },
+                    { key: 'progress', label: 'Progress' },
+                    { key: 'last_test', label: 'Last Test Date' },
+                  ].map(({ key, label }) => (
+                    <TableHead key={key}>
+                      <Button variant="ghost" onClick={() => requestSort(key)} className="font-semibold">
+                        {label}
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                      </Button>
+                    </TableHead>
+                  ))}
+                  <TableHead>Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {sortedStudents.map((student) => (
+                  <TableRow key={student.id}>
+                    <TableCell>{student.last_name}</TableCell>
+                    <TableCell>{student.first_name}</TableCell>
+                    <TableCell>{student.student_id}</TableCell>
+                    <TableCell>{student.shop_class}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center">
+                        <Progress value={getAverageScore(student)} className="mr-2 w-24" />
+                        {getAverageScore(student).toFixed(2)}%
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center">
+                        <Progress value={getProgress(student)} className="mr-2 w-24" />
+                        {student.test_results ? `${student.test_results.length}/${totalTests}` : '0/0'}
+                      </div>
+                    </TableCell>
+                    <TableCell>{getLastTestDate(student)}</TableCell>
+                    <TableCell>
+                      <Button variant="ghost" onClick={() => setSelectedStudent(student)}>
+                        View Details
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </TabsContent>
         <TabsContent value="details">
           {selectedStudent ? (
