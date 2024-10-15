@@ -8,6 +8,52 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Checkbox } from '../ui/checkbox';
 
+const UserManagement = () => {
+  const [users, setUsers] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(null);
+  const [editingPinUser, setEditingPinUser] = useState(null);
+  const [editingUser, setEditingUser] = useState(null);
+  const [cohorts, setCohorts] = useState([]);
+
+  useEffect(() => {
+    fetchUsers();
+    fetchCohorts();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:3001/api/admin/users');
+      if (!response.ok) {
+        throw new Error('Failed to fetch users');
+      }
+      const data = await response.json();
+      setUsers(data);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      setError('Failed to load users. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCohorts = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/cohorts');
+      if (!response.ok) {
+        throw new Error('Failed to fetch cohorts');
+      }
+      const data = await response.json();
+      setCohorts(data);
+    } catch (error) {
+      console.error('Error fetching cohorts:', error);
+      setError('Failed to load shop classes. Please try again.');
+    }
+  };
+
 const EditPinDialog = ({ isOpen, onClose, user, onUpdatePin }) => {
   const [newPin, setNewPin] = useState('');
   const [error, setError] = useState('');
@@ -48,7 +94,7 @@ const EditPinDialog = ({ isOpen, onClose, user, onUpdatePin }) => {
   );
 };
 
-const EditUserDialog = ({ isOpen, onClose, user, onUpdateUser }) => {
+const EditUserDialog = ({ isOpen, onClose, user, onUpdateUser, cohorts }) => {
   const [editedUser, setEditedUser] = useState(user || {});
 
   useEffect(() => {
@@ -64,13 +110,6 @@ const EditUserDialog = ({ isOpen, onClose, user, onUpdateUser }) => {
     const { name, value } = e.target;
     setEditedUser(prev => ({ ...prev, [name]: value }));
   };
-
-
-  const shopClasses = [
-    "A Block - Wood 11/12",
-    "B Block - Wood 11/12",
-    "D Block - Wood 9/10"
-  ];
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -116,9 +155,9 @@ const EditUserDialog = ({ isOpen, onClose, user, onUpdateUser }) => {
                 <SelectValue placeholder="Select a shop class" />
               </SelectTrigger>
               <SelectContent>
-                {shopClasses.map((shopClass) => (
-                  <SelectItem key={shopClass} value={shopClass}>
-                    {shopClass}
+                {cohorts.map((cohort) => (
+                  <SelectItem key={cohort.id} value={cohort.name}>
+                    {cohort.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -141,36 +180,6 @@ const EditUserDialog = ({ isOpen, onClose, user, onUpdateUser }) => {
     </Dialog>
   );
 };
-
-const UserManagement = () => {
-  const [users, setUsers] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [deleteLoading, setDeleteLoading] = useState(null);
-  const [editingPinUser, setEditingPinUser] = useState(null);
-  const [editingUser, setEditingUser] = useState(null);
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const fetchUsers = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('http://localhost:3001/api/admin/users');
-      if (!response.ok) {
-        throw new Error('Failed to fetch users');
-      }
-      const data = await response.json();
-      setUsers(data);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      setError('Failed to load users. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleDeleteUser = async (userId) => {
     if (window.confirm('Are you sure you want to delete this user?')) {
@@ -233,12 +242,12 @@ const UserManagement = () => {
     }
   };
 
-const filteredUsers = users.filter(user => 
-  user.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-  user.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-  user.student_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-  (user.shop_class && user.shop_class.toLowerCase().includes(searchTerm.toLowerCase()))
-);
+  const filteredUsers = users.filter(user => 
+    user.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.student_id.includes(searchTerm)
+    (user.shop_class && user.shop_class.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
   if (loading) return <p>Loading users...</p>;
 
@@ -314,6 +323,7 @@ return (
           onClose={() => setEditingUser(null)}
           user={editingUser}
           onUpdateUser={handleUpdateUser}
+          cohorts={cohorts}
         />
       )}
     </div>
