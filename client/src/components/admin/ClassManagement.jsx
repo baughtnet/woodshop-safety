@@ -91,7 +91,10 @@ const ClassManagement = () => {
       const usersResponse = await fetch(`http://localhost:3001/api/cohorts/${editingCohort.id}/users`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userIds: selectedUsers })
+        body: JSON.stringify({
+          userIds: selectedUsers,
+          cohortName: editingCohort.name
+        })
       });
 
       if (!usersResponse.ok) {
@@ -256,7 +259,7 @@ const ClassManagement = () => {
                       onCheckedChange={() => handleUserSelection(user.id)}
                     />
                     <Label htmlFor={`user-${user.id}`}>
-                      {user.first_name} {user.last_name} ({user.student_id})
+                      {user.first_name} {user.last_name} ({user.student_id}) - Current Shop Class: {user.shop_class || 'None'}
                     </Label>
                   </div>
                 ))}

@@ -63,11 +63,11 @@ router.delete('/:id', async (req, res) => {
 });
 
 router.get('/:id/users', async (req, res) => {
-  const { id } = req.params;
+  const { name } = req.params;
   try {
     const result = await pool.query(
       'SELECT users.id, users.first_name, users.last_name, users.student_id FROM users WHERE shop_class = $1',
-      [id]
+      [name]
     );
     res.json(result.rows);
   } catch (error) {
@@ -79,14 +79,14 @@ router.get('/:id/users', async (req, res) => {
 // Update users for a specific cohort
 router.put('/:id/users', async (req, res) => {
   const { id } = req.params;
-  const { userIds } = req.body;
+  const { userIds, cohortName } = req.body;
   try {
     // First, remove all users from this cohort
-    await pool.query('UPDATE users SET shop_class = NULL WHERE shop_class = $1', [id]);
+    await pool.query('UPDATE users SET shop_class = NULL WHERE shop_class = $1', [cohortName]);
     
     // Then, add the selected users to this cohort
     if (userIds && userIds.length > 0) {
-      await pool.query('UPDATE users SET shop_class = $1 WHERE id = ANY($2::int[])', [id, userIds]);
+      await pool.query('UPDATE users SET shop_class = $1 WHERE id = ANY($2::int[])', [cohortName, userIds]);
     }
     
     res.json({ message: 'Cohort users updated successfully.' });
