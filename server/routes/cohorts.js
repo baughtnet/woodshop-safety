@@ -62,4 +62,38 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+router.get('/:id/users', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query(
+      'SELECT users.id, users.first_name, users.last_name, users.student_id FROM users WHERE shop_class = $1',
+      [id]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching cohort users:', error);
+    res.status(500).json({ error: 'An error occurred while fetching cohort users.' });
+  }
+});
+
+// Update users for a specific cohort
+router.put('/:id/users', async (req, res) => {
+  const { id } = req.params;
+  const { userIds } = req.body;
+  try {
+    // First, remove all users from this cohort
+    await pool.query('UPDATE users SET shop_class = NULL WHERE shop_class = $1', [id]);
+    
+    // Then, add the selected users to this cohort
+    if (userIds && userIds.length > 0) {
+      await pool.query('UPDATE users SET shop_class = $1 WHERE id = ANY($2::int[])', [id, userIds]);
+    }
+    
+    res.json({ message: 'Cohort users updated successfully.' });
+  } catch (error) {
+    console.error('Error updating cohort users:', error);
+    res.status(500).json({ error: 'An error occurred while updating cohort users.' });
+  }
+});
+
 module.exports = router;
