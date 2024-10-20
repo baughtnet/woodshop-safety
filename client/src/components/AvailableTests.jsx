@@ -10,7 +10,7 @@ const AvailableTests = ({ user, onStartTest, onReviewTest }) => {
   useEffect(() => {
     const fetchTests = async () => {
       try {
-        const response = await fetch(`http://localhost:3001/api/tests/available/${user.id}`);
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/tests/available/${user.id}`);
         if (!response.ok) {
           throw new Error('Failed to fetch available tests');
         }

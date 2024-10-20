@@ -26,7 +26,7 @@ const UserManagement = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:3001/api/admin/users');
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/admin/users`);
       if (!response.ok) {
         throw new Error('Failed to fetch users');
       }
@@ -42,7 +42,7 @@ const UserManagement = () => {
 
   const fetchCohorts = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/cohorts');
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/cohorts`);
       if (!response.ok) {
         throw new Error('Failed to fetch cohorts');
       }
@@ -185,7 +185,7 @@ const EditUserDialog = ({ isOpen, onClose, user, onUpdateUser, cohorts }) => {
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
         setDeleteLoading(userId);
-        const response = await fetch(`http://localhost:3001/api/admin/users/${userId}`, { method: 'DELETE' });
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/admin/users/${userId}`, { method: 'DELETE' });
         if (!response.ok) {
           throw new Error('Failed to delete user');
         }
@@ -202,7 +202,7 @@ const EditUserDialog = ({ isOpen, onClose, user, onUpdateUser, cohorts }) => {
 
   const handleUpdatePin = async (newPin) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/admin/users/${editingPinUser.id}/updatePin`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/admin/users/${editingPinUser.id}/updatePin`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ newPin })
@@ -223,7 +223,7 @@ const EditUserDialog = ({ isOpen, onClose, user, onUpdateUser, cohorts }) => {
 
   const handleUpdateUser = async (updatedUser) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/admin/users/${updatedUser.id}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/admin/users/${updatedUser.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedUser)

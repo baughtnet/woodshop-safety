@@ -21,7 +21,7 @@ const TestManager = () => {
 
   const fetchTests = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/admin/tests');
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/admin/tests`);
       if (response.ok) {
         const data = await response.json();
         setTests(data);
@@ -36,7 +36,7 @@ const TestManager = () => {
   const fetchQuestions = useCallback(async (testId) => {
     if (!testId) return;
     try {
-      const response = await fetch(`http://localhost:3001/api/admin/tests/${testId}/questions`);
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/admin/tests/${testId}/questions`);
       if (response.ok) {
         const data = await response.json();
         setQuestions(data);
@@ -62,8 +62,8 @@ const TestManager = () => {
     e.preventDefault();
     try {
       const url = editingTest
-        ? `http://localhost:3001/api/admin/tests/${editingTest.id}`
-        : 'http://localhost:3001/api/admin/tests';
+        ? `${process.env.REACT_APP_API_URL}/api/admin/tests/${editingTest.id}`
+        : `${process.env.REACT_APP_API_URL}/api/admin/tests`;
       const method = editingTest ? 'PUT' : 'POST';
       const response = await fetch(url, {
         method,
@@ -92,8 +92,8 @@ const TestManager = () => {
 
     try {
       const url = editingQuestion
-        ? `http://localhost:3001/api/admin/questions/${editingQuestion.id}`
-        : `http://localhost:3001/api/admin/tests/${selectedTest}/questions`;
+        ? `${process.env.REACT_APP_API_URL}/api/admin/questions/${editingQuestion.id}`
+        : `${process.env.REACT_APP_API_URL}/api/admin/tests/${selectedTest}/questions`;
       const method = editingQuestion ? 'PUT' : 'POST';
       const response = await fetch(url, {
         method,

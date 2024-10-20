@@ -25,7 +25,7 @@ const RegistrationForm = ({ onBackToHome, onSuccessfulRegister }) => {
 
   const fetchCohorts = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/cohorts');
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/cohorts`);
       if (!response.ok) throw new Error('Failed to fetch cohorts');
       const data = await response.json();
       setCohorts(data);
@@ -58,7 +58,7 @@ const RegistrationForm = ({ onBackToHome, onSuccessfulRegister }) => {
     console.log('Form data being sent: ', formData);
     
     try {
-      const response = await fetch('http://localhost:3001/api/auth/register', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

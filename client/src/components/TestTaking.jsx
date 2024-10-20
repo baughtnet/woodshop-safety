@@ -20,7 +20,7 @@ const TestTaking = ({ user, testId, onTestComplete }) => {
   useEffect(() => {
     const fetchQuestions = async () => {
       try {
-        const response = await fetch(`http://localhost:3001/api/tests/${testId}/questions`);
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/tests/${testId}/questions`);
         if (!response.ok) {
           throw new Error('Failed to fetch test questions');
         }
@@ -86,7 +86,7 @@ const TestTaking = ({ user, testId, onTestComplete }) => {
     try {
       const score = questions.reduce((acc, q) => answers[q.id] === q.correct_answer ? acc + 1 : acc, 0);
       const timeSpent = 3600 - timeRemaining;
-      const response = await fetch(`http://localhost:3001/api/tests/${testId}/submit`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/tests/${testId}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

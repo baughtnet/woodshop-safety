@@ -15,7 +15,7 @@ const TestManagement = () => {
   }, []);
   const fetchTests = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/admin/tests');
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/admin/tests`);
       if (response.ok) {
         const data = await response.json();
         setTests(data);
@@ -30,7 +30,7 @@ const TestManagement = () => {
   const handleAddTest = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:3001/api/admin/tests', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/admin/tests`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newTest),
@@ -49,7 +49,7 @@ const TestManagement = () => {
   const handleEditTest = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(`http://localhost:3001/api/admin/tests/${editingTest.id}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/admin/tests/${editingTest.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editingTest),

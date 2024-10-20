@@ -34,8 +34,8 @@ const StudentProgress = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const studentsResponse = await fetch('http://localhost:3001/api/admin/students-progress');
-        const cohortsResponse = await fetch('http://localhost:3001/api/cohorts');
+        const studentsResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/admin/students-progress`);
+        const cohortsResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/cohorts`);
         
         if (!studentsResponse.ok || !cohortsResponse.ok) {
           throw new Error('Failed to fetch data');
@@ -128,7 +128,7 @@ const getTestDetails = async (userId, testId) => {
     }
 
     // Fetch available tests to get the latest attempt information
-    const availableTestsResponse = await fetch(`http://localhost:3001/api/tests/available/${userId}`);
+    const availableTestsResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/tests/available/${userId}`);
     if (!availableTestsResponse.ok) {
       throw new Error(`HTTP error! status: ${availableTestsResponse.status}`);
     }
@@ -140,14 +140,14 @@ const getTestDetails = async (userId, testId) => {
     }
 
     // Fetch failed questions for review
-    const reviewResponse = await fetch(`http://localhost:3001/api/tests/${testId}/review/${userId}`);
+    const reviewResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/tests/${testId}/review/${userId}`);
     if (!reviewResponse.ok) {
       throw new Error(`HTTP error! status: ${reviewResponse.status}`);
     }
     const failedQuestions = await reviewResponse.json();
 
     // Fetch all questions for this test
-    const questionsResponse = await fetch(`http://localhost:3001/api/tests/${testId}/questions`);
+    const questionsResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/tests/${testId}/questions`);
     if (!questionsResponse.ok) {
       throw new Error(`HTTP error! status: ${questionsResponse.status}`);
     }

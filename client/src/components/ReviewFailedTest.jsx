@@ -10,7 +10,7 @@ const ReviewFailedTest = ({ user, testId, onBackToTests }) => {
   useEffect(() => {
     const fetchFailedQuestions = async () => {
       try {
-        const response = await fetch(`http://localhost:3001/api/tests/${testId}/review/${user.id}`);
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/tests/${testId}/review/${user.id}`);
         if (!response.ok) {
           throw new Error('Failed to fetch failed questions');
         }

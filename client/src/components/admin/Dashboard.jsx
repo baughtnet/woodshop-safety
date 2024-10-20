@@ -13,7 +13,7 @@ const Dashboard = () => {
     // Fetch dashboard stats
     const fetchStats = async () => {
       try {
-        const response = await fetch('http://localhost:3001/api/admin/dashboard');
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/admin/dashboard`);
         const data = await response.json();
         setStats(data);
       } catch (error) {

@@ -22,7 +22,7 @@ const QuestionManagement = () => {
 
   const fetchTests = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/admin/tests');
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/admin/tests`);
       if (response.ok) {
         const data = await response.json();
         setTests(data);
@@ -36,7 +36,7 @@ const QuestionManagement = () => {
 
   const fetchQuestions = useCallback(async (testId) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/admin/tests/${testId}/questions`);
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/admin/tests/${testId}/questions`);
       if (response.ok) {
         const data = await response.json();
         console.log('Fetched questions:', data);
@@ -87,7 +87,7 @@ const QuestionManagement = () => {
   };
 
   const handleAdd = async (formattedQuestion) => {
-    const response = await fetch(`http://localhost:3001/api/admin/tests/${selectedTest}/questions`, {
+    const response = await fetch(`${process.env.REACT_APP_API_URL}/api/admin/tests/${selectedTest}/questions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(formattedQuestion),
@@ -98,7 +98,7 @@ const QuestionManagement = () => {
   };
 
   const handleUpdate = async (formattedQuestion) => {
-    const response = await fetch(`http://localhost:3001/api/admin/questions/${editingQuestion.id}`, {
+    const response = await fetch(`${process.env.REACT_APP_API_URL}/api/admin/questions/${editingQuestion.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(formattedQuestion),

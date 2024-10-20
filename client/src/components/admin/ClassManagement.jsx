@@ -28,7 +28,7 @@ const ClassManagement = () => {
   const fetchCohorts = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:3001/api/cohorts');
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/cohorts`);
       if (!response.ok) {
         throw new Error('Failed to fetch cohorts');
       }
@@ -44,7 +44,7 @@ const ClassManagement = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/admin/users');
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/admin/users`);
       if (!response.ok) {
         throw new Error('Failed to fetch users');
       }
@@ -58,7 +58,7 @@ const ClassManagement = () => {
 
   const handleEditCohort = async (cohort) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/cohorts/${cohort.id}/users`);
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/cohorts/${cohort.id}/users`);
       if (!response.ok) {
         throw new Error('Failed to fetch cohort users');
       }
@@ -74,7 +74,7 @@ const ClassManagement = () => {
   const handleUpdateCohort = async () => {
     try {
       // Update cohort details
-      const detailsResponse = await fetch(`http://localhost:3001/api/cohorts/${editingCohort.id}`, {
+      const detailsResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/cohorts/${editingCohort.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -88,7 +88,7 @@ const ClassManagement = () => {
       }
 
       // Update cohort users
-      const usersResponse = await fetch(`http://localhost:3001/api/cohorts/${editingCohort.id}/users`, {
+      const usersResponse = await fetch(`${process.env.REACT_APP_API_URL}/api/cohorts/${editingCohort.id}/users`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -112,7 +112,7 @@ const ClassManagement = () => {
 
   const handleAddCohort = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/cohorts', {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/cohorts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newCohort)
@@ -135,7 +135,7 @@ const ClassManagement = () => {
   const handleDeleteCohort = async (cohortId) => {
     if (window.confirm('Are you sure you want to delete this cohort?')) {
       try {
-        const response = await fetch(`http://localhost:3001/api/cohorts/${cohortId}`, { 
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/cohorts/${cohortId}`, { 
           method: 'DELETE' 
         });
         if (!response.ok) {
