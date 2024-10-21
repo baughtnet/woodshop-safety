@@ -172,15 +172,29 @@ router.get('/students-progress', async (req, res) => {
 // Update test details
 router.put('/tests/:testId', async (req, res) => {
   const { testId } = req.params;
-  const { name, description, total_questions, display_order } = req.body;
+  const { name, description, display_order, total_questions, time_limit, max_retries } = req.body;
+  
+  console.log(`Attempting to update test with ID: ${testId}`);
+  console.log('Update data:', { name, description, display_order, total_questions, time_limit, max_retries });
+
   try {
-    await pool.query(
-      'UPDATE tests SET name = $1, description = $2, total_questions = $3, display_order = $4 WHERE id = $5',
-      [name, description, total_questions, display_order, testId]
+    const result = await pool.query(
+      'UPDATE tests SET name = $1, description = $2, display_order = $3, total_questions = $4, time_limit = $5, max_retries = $6 WHERE id = $7 RETURNING *',
+      [name, description, display_order, total_questions, time_limit, max_retries, testId]
     );
-    res.json({ message: 'Test updated successfully' });
+
+    console.log(`Query executed. Rows affected: ${result.rowCount}`);
+
+    if (result.rows.length === 0) {
+      console.log(`No test found with ID: ${testId}`);
+      return res.status(404).json({ error: 'Test not found' });
+    }
+
+    console.log(`Test updated successfully. Updated test:`, result.rows[0]);
+    res.json(result.rows[0]);
   } catch (err) {
-    res.status(500).json({ error: 'Error updating test' });
+    console.error('Error updating test:', err);
+    res.status(500).json({ error: 'Error updating test', details: err.message });
   }
 });
 
@@ -237,6 +251,24 @@ router.put('/questions/:questionId', async (req, res) => {
     res.json({ message: 'Question updated successfully' });
   } catch (err) {
     res.status(500).json({ error: 'Error updating question' });
+  }
+});
+
+router.post('/tests', async (req, res) => {
+  const { name, description, display_order, time_limit, max_retries } = req.body;
+  console.log('Attempting to create a new test:', { name, description, display_order, time_limit, max_retries });
+
+  try {
+    const result = await pool.query(
+      'INSERT INTO tests (name, description, display_order, time_limit, max_retries) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [name, description, display_order, time_limit, max_retries]
+    );
+
+    console.log('New test created:', result.rows[0]);
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('Error creating test:', err);
+    res.status(500).json({ error: 'Error creating test', details: err.message });
   }
 });
 
@@ -351,6 +383,70 @@ router.delete('/users/:userId', async (req, res) => {
         console.error('Error deleting user:', error);
         res.status(500).json({ error: 'An error occurred while deleting the user.' });
     }
+});
+
+// Delete a question
+router.delete('/questions/:questionId', async (req, res) => {
+  const { questionId } = req.params;
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+
+    // First, delete related records in the failed_questions table
+    await client.query('DELETE FROM failed_questions WHERE question_id = $1', [questionId]);
+
+    // Then, delete the question itself
+    const result = await client.query('DELETE FROM questions WHERE id = $1 RETURNING *', [questionId]);
+
+    if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Question not found' });
+    }
+
+    await client.query('COMMIT');
+    res.json({ message: 'Question deleted successfully', deletedQuestion: result.rows[0] });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Error deleting question:', err);
+    res.status(500).json({ error: 'Error deleting question', details: err.message });
+  } finally {
+    client.release();
+  }
+});
+
+router.delete('/tests/:testId', async (req, res) => {
+  const { testId } = req.params;
+  console.log(`Attempting to delete test with ID: ${testId}`);
+
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+
+    // Delete all questions associated with this test
+    const deleteQuestionsResult = await client.query('DELETE FROM questions WHERE test_id = $1', [testId]);
+    console.log(`Deleted ${deleteQuestionsResult.rowCount} questions associated with test ${testId}`);
+
+    // Delete the test
+    const deleteTestResult = await client.query('DELETE FROM tests WHERE id = $1 RETURNING *', [testId]);
+
+    if (deleteTestResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      console.log(`No test found with ID: ${testId}`);
+      return res.status(404).json({ error: 'Test not found' });
+    }
+
+    await client.query('COMMIT');
+    console.log(`Test deleted successfully. Deleted test:`, deleteTestResult.rows[0]);
+    res.json({ message: 'Test deleted successfully', deletedTest: deleteTestResult.rows[0] });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Error deleting test:', err);
+    res.status(500).json({ error: 'Error deleting test', details: err.message });
+  } finally {
+    client.release();
+  }
 });
 
 module.exports = router;

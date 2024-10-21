@@ -3,21 +3,23 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
 
 const TestManager = () => {
   const [tests, setTests] = useState([]);
-  const [selectedTest, setSelectedTest] = useState('');
+  const [selectedTest, setSelectedTest] = useState(null);
+  const [isNewTest, setIsNewTest] = useState(false);
+  const [testDetails, setTestDetails] = useState({ name: '', description: '', timeLimit: 60, maxRetries: 0 });
   const [questions, setQuestions] = useState([]);
-  const [newTest, setNewTest] = useState({ name: '', description: '', display_order: 0, total_questions: 0 });
-  const [newQuestion, setNewQuestion] = useState({ question_text: '', answers: '', correct_answer: '' });
-  const [editingTest, setEditingTest] = useState(null);
   const [editingQuestion, setEditingQuestion] = useState(null);
+  const [newQuestion, setNewQuestion] = useState({ question_text: '', answers: '', correct_answer: '' });
   const [error, setError] = useState('');
+  const [isQuestionDialogOpen, setIsQuestionDialogOpen] = useState(false);
+  const [answers, setAnswers] = useState([]);
 
   const fetchTests = useCallback(async () => {
     try {
@@ -53,33 +55,72 @@ const TestManager = () => {
   }, [fetchTests]);
 
   useEffect(() => {
-    if (selectedTest) {
-      fetchQuestions(selectedTest);
+    if (selectedTest && !isNewTest) {
+      fetchQuestions(selectedTest.id);
+      setTestDetails({
+        name: selectedTest.name,
+        description: selectedTest.description,
+        timeLimit: selectedTest.time_limit || 60,
+        maxRetries: selectedTest.max_retries || 0
+      });
     }
-  }, [selectedTest, fetchQuestions]);
+  }, [selectedTest, isNewTest, fetchQuestions]);
+
+  useEffect(() => {
+    if (newQuestion.answers) {
+      const answerList = newQuestion.answers.split('\n').filter(answer => answer.trim() !== '');
+      setAnswers(answerList);
+    }
+  }, [newQuestion.answers]);
+
+  const handleTestSelect = (testId) => {
+    if (testId === 'new') {
+      setIsNewTest(true);
+      setSelectedTest(null);
+      setTestDetails({ name: '', description: '', timeLimit: 60, maxRetries: 0 });
+      setQuestions([]);
+    } else {
+      setIsNewTest(false);
+      setSelectedTest(tests.find(test => test.id.toString() === testId));
+    }
+  };
 
   const handleTestSubmit = async (e) => {
     e.preventDefault();
     try {
-      const url = editingTest
-        ? `${process.env.REACT_APP_API_URL}/api/admin/tests/${editingTest.id}`
-        : `${process.env.REACT_APP_API_URL}/api/admin/tests`;
-      const method = editingTest ? 'PUT' : 'POST';
+      const url = isNewTest
+        ? `${process.env.REACT_APP_API_URL}/api/admin/tests`
+        : `${process.env.REACT_APP_API_URL}/api/admin/tests/${selectedTest.id}`;
+      const method = isNewTest ? 'POST' : 'PUT';
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editingTest || newTest),
+        body: JSON.stringify({
+          ...testDetails,
+          time_limit: testDetails.timeLimit,
+          max_retries: testDetails.maxRetries
+        }),
       });
       if (response.ok) {
+        const data = await response.json();
+        if (isNewTest) {
+          setSelectedTest(data);
+          setIsNewTest(false);
+        }
         fetchTests();
-        setEditingTest(null);
-        setNewTest({ name: '', description: '', display_order: 0, total_questions: 0 });
+        setError('Test saved successfully');
       } else {
-        setError(`Failed to ${editingTest ? 'update' : 'add'} test`);
+        setError('Failed to save test');
       }
     } catch (error) {
-      setError(`Error ${editingTest ? 'updating' : 'adding'} test: ` + error.message);
+      setError('Error saving test: ' + error.message);
     }
+  };
+
+  const handleAnswersChange = (e) => {
+    const answerList = e.target.value.split('\n').filter(answer => answer.trim() !== '');
+    setNewQuestion({...newQuestion, answers: e.target.value});
+    setAnswers(answerList);
   };
 
   const handleQuestionSubmit = async (e) => {
@@ -93,7 +134,7 @@ const TestManager = () => {
     try {
       const url = editingQuestion
         ? `${process.env.REACT_APP_API_URL}/api/admin/questions/${editingQuestion.id}`
-        : `${process.env.REACT_APP_API_URL}/api/admin/tests/${selectedTest}/questions`;
+        : `${process.env.REACT_APP_API_URL}/api/admin/tests/${selectedTest.id}/questions`;
       const method = editingQuestion ? 'PUT' : 'POST';
       const response = await fetch(url, {
         method,
@@ -101,42 +142,95 @@ const TestManager = () => {
         body: JSON.stringify(formattedQuestion),
       });
       if (response.ok) {
-        fetchQuestions(selectedTest);
+        fetchQuestions(selectedTest.id);
         setEditingQuestion(null);
         setNewQuestion({ question_text: '', answers: '', correct_answer: '' });
+        setIsQuestionDialogOpen(false);
+        setError('Question saved successfully');
       } else {
-        setError(`Failed to ${editingQuestion ? 'update' : 'add'} question`);
+        setError('Failed to save question');
       }
     } catch (error) {
-      setError(`Error ${editingQuestion ? 'updating' : 'adding'} question: ` + error.message);
+      setError('Error saving question: ' + error.message);
+    }
+  };
+  
+
+const handleDeleteQuestion = async (questionId) => {
+  if (window.confirm('Are you sure you want to delete this question?')) {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/admin/questions/${questionId}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        fetchQuestions(selectedTest.id);
+        setError('Question deleted successfully');
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || 'Failed to delete question');
+      }
+    } catch (error) {
+      setError('Error deleting question: ' + error.message);
+    }
+  }
+};
+
+  const handleDeleteTest = async () => {
+    if (!selectedTest) return;
+
+    if (window.confirm(`Are you sure you want to delete the test "${selectedTest.name}"? This action cannot be undone.`)) {
+      try {
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/admin/tests/${selectedTest.id}`, {
+          method: 'DELETE',
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to delete test');
+        }
+
+        setError('Test deleted successfully');
+        setSelectedTest(null);
+        fetchTests();
+      } catch (error) {
+        console.error('Error deleting test:', error);
+        setError('Failed to delete test. Please try again.');
+      }
     }
   };
 
   return (
-    <div className="space-y-6">
-      {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Test Manager</h1>
+      {error && <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>}
       
-      <Card>
-        <CardHeader>
-          <CardTitle>Test Manager</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="tests">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="tests">Manage Tests</TabsTrigger>
-              <TabsTrigger value="questions">Manage Questions</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="tests">
-              <form onSubmit={handleTestSubmit} className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="md:col-span-1">
+          <CardHeader>
+            <CardTitle>Select or Create Test</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Select onValueChange={handleTestSelect} value={selectedTest?.id || (isNewTest ? 'new' : '')}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a test or create new" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="new">Create New Test</SelectItem>
+                {tests.map((test) => (
+                  <SelectItem key={test.id} value={test.id.toString()}>
+                    {test.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {(selectedTest || isNewTest) && (
+              <form onSubmit={handleTestSubmit} className="space-y-4 mt-4">
                 <div>
                   <Label htmlFor="name">Test Name</Label>
                   <Input
                     id="name"
-                    value={editingTest ? editingTest.name : newTest.name}
-                    onChange={(e) => editingTest 
-                      ? setEditingTest({...editingTest, name: e.target.value})
-                      : setNewTest({...newTest, name: e.target.value})}
+                    value={testDetails.name}
+                    onChange={(e) => setTestDetails({...testDetails, name: e.target.value})}
                     required
                   />
                 </div>
@@ -144,171 +238,149 @@ const TestManager = () => {
                   <Label htmlFor="description">Description</Label>
                   <Textarea
                     id="description"
-                    value={editingTest ? editingTest.description : newTest.description}
-                    onChange={(e) => editingTest
-                      ? setEditingTest({...editingTest, description: e.target.value})
-                      : setNewTest({...newTest, description: e.target.value})}
+                    value={testDetails.description}
+                    onChange={(e) => setTestDetails({...testDetails, description: e.target.value})}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="display_order">Display Order</Label>
+                  <Label htmlFor="timeLimit">Time Limit (minutes)</Label>
                   <Input
-                    id="display_order"
+                    id="timeLimit"
                     type="number"
-                    value={editingTest ? editingTest.display_order : newTest.display_order}
-                    onChange={(e) => editingTest
-                      ? setEditingTest({...editingTest, display_order: parseInt(e.target.value)})
-                      : setNewTest({...newTest, display_order: parseInt(e.target.value)})}
+                    value={testDetails.timeLimit}
+                    onChange={(e) => setTestDetails({...testDetails, timeLimit: parseInt(e.target.value)})}
                     required
                   />
                 </div>
                 <div>
-                  <Label htmlFor="total_questions">Total Questions</Label>
+                  <Label htmlFor="maxRetries">Max Retries (0 for unlimited)</Label>
                   <Input
-                    id="total_questions"
+                    id="maxRetries"
                     type="number"
-                    value={editingTest ? editingTest.total_questions : newTest.total_questions}
-                    onChange={(e) => editingTest
-                      ? setEditingTest({...editingTest, total_questions: parseInt(e.target.value)})
-                      : setNewTest({...newTest, total_questions: parseInt(e.target.value)})}
+                    value={testDetails.maxRetries}
+                    onChange={(e) => setTestDetails({...testDetails, maxRetries: parseInt(e.target.value)})}
                     required
                   />
                 </div>
-                <Button type="submit">{editingTest ? 'Update Test' : 'Add Test'}</Button>
-                {editingTest && (
-                  <Button type="button" onClick={() => setEditingTest(null)} variant="outline">Cancel Edit</Button>
-                )}
+                <div className="flex justify-between">
+                  <Button type="submit">{isNewTest ? 'Create Test' : 'Update Test'}</Button>
+                  {!isNewTest && (
+                    <Button type="button" variant="destructive" onClick={handleDeleteTest}>
+                      Delete Test
+                    </Button>
+                  )}
+                </div>
               </form>
+            )}
+          </CardContent>
+        </Card>
 
-              <Table className="mt-4">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Display Order</TableHead>
-                    <TableHead>Total Questions</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tests.map((test) => (
-                    <TableRow key={test.id}>
-                      <TableCell>{test.name}</TableCell>
-                      <TableCell>{test.description}</TableCell>
-                      <TableCell>{test.display_order}</TableCell>
-                      <TableCell>{test.total_questions}</TableCell>
-                      <TableCell>
-                        <Button onClick={() => setEditingTest(test)}>Edit</Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TabsContent>
-
-            <TabsContent value="questions">
-              <div className="mb-4">
-                <Label htmlFor="test-select">Select Test</Label>
-                <Select value={selectedTest} onValueChange={setSelectedTest}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a test" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tests.map((test) => (
-                      <SelectItem key={test.id} value={test.id.toString()}>
-                        {test.name || `Test ${test.id}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <form onSubmit={handleQuestionSubmit} className="space-y-4">
-                <div>
-                  <Label htmlFor="question-text">Question</Label>
-                  <Textarea
-                    id="question-text"
-                    name="question_text"
-                    value={newQuestion.question_text}
-                    onChange={(e) => setNewQuestion({...newQuestion, question_text: e.target.value})}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="answers">Answers (separate multiple answers with newlines)</Label>
-                  <Textarea
-                    id="answers"
-                    name="answers"
-                    value={newQuestion.answers}
-                    onChange={(e) => setNewQuestion({...newQuestion, answers: e.target.value})}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="correct-answer">Correct Answer</Label>
-                  <Input
-                    id="correct-answer"
-                    name="correct_answer"
-                    value={newQuestion.correct_answer}
-                    onChange={(e) => setNewQuestion({...newQuestion, correct_answer: e.target.value})}
-                    required
-                  />
-                </div>
-                <Button type="submit">
-                  {editingQuestion ? 'Update Question' : 'Add Question'}
+        {selectedTest && !isNewTest && (
+          <Card className="md:col-span-2">
+            <CardHeader>
+              <CardTitle>Questions for {selectedTest.name}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex justify-end mb-4">
+                <Button onClick={() => {
+                  setEditingQuestion(null);
+                  setNewQuestion({ question_text: '', answers: '', correct_answer: '' });
+                  setIsQuestionDialogOpen(true);
+                }}>
+                  Add New Question
                 </Button>
-                {editingQuestion && (
-                  <Button type="button" onClick={() => setEditingQuestion(null)} variant="outline">
-                    Cancel Edit
-                  </Button>
-                )}
-              </form>
-
-              {questions.length > 0 && (
-                <Table className="mt-4">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Question</TableHead>
-                      <TableHead>Answers</TableHead>
-                      <TableHead>Correct Answer</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {questions.map((question) => (
-                      <TableRow key={question.id}>
-                        <TableCell>{question.question_text}</TableCell>
-                        <TableCell>
-                          {question.answers && question.answers.length > 0 ? (
-                            <ul>
-                              {question.answers.map((answer, index) => (
-                                <li key={index}>{answer}</li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <div>No answers available</div>
-                          )}
-                        </TableCell>
-                        <TableCell>{question.correct_answer}</TableCell>
-                        <TableCell>
+              </div>
+              <Accordion type="single" collapsible className="w-full">
+                {questions.map((question, index) => (
+                  <AccordionItem key={question.id} value={`question-${question.id}`}>
+                    <AccordionTrigger>Question {index + 1}</AccordionTrigger>
+                    <AccordionContent>
+                      <div className="space-y-2">
+                        <p><strong>Question:</strong> {question.question_text}</p>
+                        <p><strong>Answers:</strong></p>
+                        <ul className="list-disc pl-5">
+                          {question.answers.map((answer, i) => (
+                            <li key={i} className={answer === question.correct_answer ? "font-bold" : ""}>
+                              {answer} {answer === question.correct_answer && "(Correct)"}
+                            </li>
+                          ))}
+                        </ul>
+                        <div className="flex space-x-2">
                           <Button onClick={() => {
                             setEditingQuestion(question);
                             setNewQuestion({
                               question_text: question.question_text,
-                              answers: Array.isArray(question.answers) ? question.answers.join('\n') : '',
-                              correct_answer: question.correct_answer || '',
+                              answers: question.answers.join('\n'),
+                              correct_answer: question.correct_answer,
                             });
-                          }}>Edit</Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+                            setIsQuestionDialogOpen(true);
+                          }}>
+                            Edit
+                          </Button>
+                          <Button variant="destructive" onClick={() => handleDeleteQuestion(question.id)}>
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      <Dialog open={isQuestionDialogOpen} onOpenChange={setIsQuestionDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingQuestion ? 'Edit Question' : 'Add New Question'}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleQuestionSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="question-text">Question</Label>
+              <Textarea
+                id="question-text"
+                value={newQuestion.question_text}
+                onChange={(e) => setNewQuestion({...newQuestion, question_text: e.target.value})}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="answers">Answers (one per line)</Label>
+              <Textarea
+                id="answers"
+                value={newQuestion.answers}
+                onChange={handleAnswersChange}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="correct-answer">Correct Answer</Label>
+              <Select
+                value={newQuestion.correct_answer}
+                onValueChange={(value) => setNewQuestion({...newQuestion, correct_answer: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select the correct answer" />
+                </SelectTrigger>
+                <SelectContent>
+                  {answers.map((answer, index) => (
+                    <SelectItem key={index} value={answer}>
+                      {answer}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter>
+              <Button type="submit">
+                {editingQuestion ? 'Update Question' : 'Add Question'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
