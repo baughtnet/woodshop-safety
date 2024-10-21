@@ -37,10 +37,10 @@ router.patch('/users/:userId', async (req, res) => {
   }
 });
 
-// Get all tests
+// Get all tests (only active)
 router.get('/tests', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM tests ORDER BY display_order');
+    const result = await pool.query('SELECT * FROM tests WHERE is_active = TRUE ORDER BY display_order');
     res.json(result.rows);
   } catch (err) {
     console.error('Error fetching tests:', err);
@@ -51,7 +51,7 @@ router.get('/tests', async (req, res) => {
 router.get('/tests/:testId/questions', async (req, res) => {
   const { testId } = req.params;
   try {
-    const result = await pool.query('SELECT * FROM questions WHERE test_id = $1', [testId]);
+    const result = await pool.query('SELECT * FROM questions WHERE test_id = $1 AND is_active = TRUE', [testId]);
     console.log('Raw database result:', result.rows); // Log raw database result
     
     const formattedQuestions = result.rows.map(question => {
@@ -385,67 +385,51 @@ router.delete('/users/:userId', async (req, res) => {
     }
 });
 
-// Delete a question
+// Soft delete a question
 router.delete('/questions/:questionId', async (req, res) => {
   const { questionId } = req.params;
-  const client = await pool.connect();
-  
+  console.log(`Attempting to soft delete question with ID: ${questionId}`);
+
   try {
-    await client.query('BEGIN');
-
-    // First, delete related records in the failed_questions table
-    await client.query('DELETE FROM failed_questions WHERE question_id = $1', [questionId]);
-
-    // Then, delete the question itself
-    const result = await client.query('DELETE FROM questions WHERE id = $1 RETURNING *', [questionId]);
+    const result = await pool.query(
+      'UPDATE questions SET is_active = FALSE WHERE id = $1 RETURNING *',
+      [questionId]
+    );
 
     if (result.rows.length === 0) {
-      await client.query('ROLLBACK');
+      console.log(`No question found with ID: ${questionId}`);
       return res.status(404).json({ error: 'Question not found' });
     }
 
-    await client.query('COMMIT');
-    res.json({ message: 'Question deleted successfully', deletedQuestion: result.rows[0] });
+    console.log(`Question soft deleted successfully. Deleted question:`, result.rows[0]);
+    res.json({ message: 'Question soft deleted successfully', deletedQuestion: result.rows[0] });
   } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('Error deleting question:', err);
-    res.status(500).json({ error: 'Error deleting question', details: err.message });
-  } finally {
-    client.release();
+    console.error('Error soft deleting question:', err);
+    res.status(500).json({ error: 'Error soft deleting question', details: err.message });
   }
 });
 
+// Soft delete a test
 router.delete('/tests/:testId', async (req, res) => {
   const { testId } = req.params;
-  console.log(`Attempting to delete test with ID: ${testId}`);
+  console.log(`Attempting to soft delete test with ID: ${testId}`);
 
-  const client = await pool.connect();
-  
   try {
-    await client.query('BEGIN');
+    const result = await pool.query(
+      'UPDATE tests SET is_active = FALSE WHERE id = $1 RETURNING *',
+      [testId]
+    );
 
-    // Delete all questions associated with this test
-    const deleteQuestionsResult = await client.query('DELETE FROM questions WHERE test_id = $1', [testId]);
-    console.log(`Deleted ${deleteQuestionsResult.rowCount} questions associated with test ${testId}`);
-
-    // Delete the test
-    const deleteTestResult = await client.query('DELETE FROM tests WHERE id = $1 RETURNING *', [testId]);
-
-    if (deleteTestResult.rows.length === 0) {
-      await client.query('ROLLBACK');
+    if (result.rows.length === 0) {
       console.log(`No test found with ID: ${testId}`);
       return res.status(404).json({ error: 'Test not found' });
     }
 
-    await client.query('COMMIT');
-    console.log(`Test deleted successfully. Deleted test:`, deleteTestResult.rows[0]);
-    res.json({ message: 'Test deleted successfully', deletedTest: deleteTestResult.rows[0] });
+    console.log(`Test soft deleted successfully. Deleted test:`, result.rows[0]);
+    res.json({ message: 'Test soft deleted successfully', deletedTest: result.rows[0] });
   } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('Error deleting test:', err);
-    res.status(500).json({ error: 'Error deleting test', details: err.message });
-  } finally {
-    client.release();
+    console.error('Error soft deleting test:', err);
+    res.status(500).json({ error: 'Error soft deleting test', details: err.message });
   }
 });
 
